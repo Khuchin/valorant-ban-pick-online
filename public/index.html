@@ -827,22 +827,29 @@
     /* 요원 스킬 툴팁 */
     .agent-tooltip {
       position: fixed;
-      width: min(390px, calc(100vw - 24px));
-      max-height: min(620px, calc(100vh - 24px));
-      overflow: auto;
+      width: min(410px, calc(100vw - 24px));
+      max-height: min(72vh, 620px);
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
       padding: 13px;
       border: 1px solid #4d6281;
       border-radius: 14px;
       background: linear-gradient(160deg, rgba(20,31,49,.985), rgba(9,14,24,.985));
       box-shadow: 0 24px 70px rgba(0,0,0,.58);
-      pointer-events: none;
+      pointer-events: auto;
       opacity: 0;
       transform: translateY(4px);
       transition: opacity .12s ease, transform .12s ease;
     }
+    .agent-tooltip::-webkit-scrollbar { width: 9px; }
+    .agent-tooltip::-webkit-scrollbar-track { background: rgba(255,255,255,.025); border-radius: 10px; }
+    .agent-tooltip::-webkit-scrollbar-thumb { background: rgba(130,156,195,.48); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+    .agent-tooltip::-webkit-scrollbar-thumb:hover { background: rgba(160,188,226,.66); background-clip: padding-box; }
     .agent-tooltip[hidden] { display: none; }
     .agent-tooltip.show { opacity: 1; transform: translateY(0); }
-    .tooltip-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
+    .tooltip-head { position: sticky; top: -13px; z-index: 2; display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; margin: -13px -13px 0; padding: 13px 13px 9px; border-bottom: 1px solid var(--line); background: linear-gradient(160deg, rgba(20,31,49,.995), rgba(13,21,34,.995)); }
     .tooltip-name { font-size: 18px; font-weight: 1000; }
     .tooltip-role { margin-top: 2px; font-size: 11px; font-weight: 900; }
     .tooltip-tier { flex: 0 0 auto; padding: 5px 8px; border-radius: 9px; font-size: 11px; font-weight: 1000; background: rgba(255,255,255,.06); }
@@ -854,6 +861,7 @@
     .tooltip-skill strong { display: block; font-size: 12px; }
     .tooltip-skill p { color: #b4bed0; font-size: 10px; margin-top: 2px; line-height: 1.45; }
     .tooltip-loading { color: var(--muted); padding: 10px 2px 2px; font-size: 11px; }
+    .tooltip-scroll-hint { position: sticky; bottom: -13px; z-index: 2; margin: 10px -13px -13px; padding: 7px 10px; text-align: center; color: #c9d5e8; background: rgba(8,14,24,.96); border-top: 1px solid rgba(89,108,139,.42); font-size: 9px; font-weight: 900; }
 
     /* 맵별 요원 티어 편집기 */
     .tier-modal { width: min(1180px, 100%); max-height: calc(100vh - 28px); overflow: auto; border: 1px solid #4b5f7d; border-radius: 18px; background: linear-gradient(155deg,#162136,#0b111d); box-shadow: 0 30px 90px rgba(0,0,0,.58); padding: 16px; }
@@ -1093,7 +1101,7 @@
         <a href="https://www.vstats.gg/" target="_blank" rel="noopener noreferrer">VStats</a>
         <a href="https://valking.gg/en/agents" target="_blank" rel="noopener noreferrer">Valking</a>
       </div>
-      <div class="tier-note">티어는 Riot의 공식 등급이 아니며 패치·랭크·지역·프로 경기 기준에 따라 달라집니다. 참고한 사이트와 날짜를 함께 적어두는 것을 권장합니다.</div>
+      <div class="tier-note"><strong>개인 전용:</strong> 이 티어표는 현재 브라우저에만 저장되며 온라인 상대 팀이나 관전자에게 전송되지 않습니다.<br>티어는 Riot의 공식 등급이 아니며 패치·랭크·지역·프로 경기 기준에 따라 달라집니다. 참고한 사이트와 날짜를 함께 적어두는 것을 권장합니다.</div>
       <div class="tier-board" id="tierBoard"></div>
       <div class="tier-actions">
         <div class="tier-selection-help" id="tierSelectionHelp">요원 칩을 끌어 옮기거나, 요원을 누른 뒤 원하는 티어 줄을 누르세요.</div>
@@ -1278,15 +1286,14 @@
       token: "",
       deadline: null,
       members: { A: null, B: null, spectators: 0 },
-      tierProfile: null,
       pollTimer: null,
       pollBusy: false
     };
     const TIER_ORDER = ["S", "A", "B", "C", "D", ""];
-    const TIER_STORAGE_KEY = "valorantMapTierProfilesV1";
+    const TIER_STORAGE_KEY = "valorantMapTierProfilesLocalV2";
+    const LEGACY_TIER_STORAGE_KEY = "valorantMapTierProfilesV1";
     let tierProfiles = {};
     let selectedTierAgentId = "";
-    let tierPublishTimer = null;
     let tooltipHideTimer = null;
 
     function normalizeAgentKey(value) {
@@ -1374,7 +1381,12 @@
 
     function loadTierProfiles() {
       try {
-        const parsed = JSON.parse(localStorage.getItem(TIER_STORAGE_KEY) || "{}");
+        let raw = localStorage.getItem(TIER_STORAGE_KEY);
+        if (!raw) {
+          raw = localStorage.getItem(LEGACY_TIER_STORAGE_KEY);
+          if (raw) localStorage.setItem(TIER_STORAGE_KEY, raw);
+        }
+        const parsed = JSON.parse(raw || "{}");
         if (parsed && typeof parsed === "object") {
           MAPS.forEach(map => {
             if (parsed[map.id]) tierProfiles[map.id] = sanitizeTierProfile(parsed[map.id], map.id);
@@ -1399,10 +1411,6 @@
 
     function activeTierProfile() {
       if (!state.selectedMap) return blankTierProfile("");
-      if (online.active) {
-        if (online.tierProfile && online.tierProfile.mapId === state.selectedMap) return online.tierProfile;
-        if (online.role !== "A") return blankTierProfile(state.selectedMap);
-      }
       return localTierProfile(state.selectedMap);
     }
 
@@ -1411,24 +1419,7 @@
     }
 
     function canEditTierProfile() {
-      return Boolean(state.selectedMap) && (!online.active || online.role === "A");
-    }
-
-    function queueTierProfilePublish() {
-      if (!online.active || online.role !== "A" || !state.selectedMap) return;
-      clearTimeout(tierPublishTimer);
-      tierPublishTimer = setTimeout(() => {
-        const profile = sanitizeTierProfile(localTierProfile(state.selectedMap), state.selectedMap);
-        online.tierProfile = profile;
-        sendOnlineAction("set-tier-profile", { profile });
-      }, 250);
-    }
-
-    async function publishTierProfileForMap(mapId) {
-      if (!online.active || online.role !== "A" || !mapId) return;
-      const profile = sanitizeTierProfile(localTierProfile(mapId), mapId);
-      online.tierProfile = profile;
-      await sendOnlineAction("set-tier-profile", { profile });
+      return Boolean(state.selectedMap);
     }
 
     function portraitMarkup(agent, className = "mini-portrait") {
@@ -1582,9 +1573,6 @@
       if (payload.state) state = hydrateServerState(payload.state);
       online.deadline = payload.deadline || null;
       online.members = payload.members || online.members;
-      const previousTierSignature = JSON.stringify(online.tierProfile || null);
-      online.tierProfile = payload.tierProfile ? sanitizeTierProfile(payload.tierProfile, payload.tierProfile.mapId || state.selectedMap) : null;
-      const tierProfileChanged = previousTierSignature !== JSON.stringify(online.tierProfile || null);
       if (payload.teamNames) {
         els.teamAName.value = payload.teamNames.A || "A팀";
         els.teamBName.value = payload.teamNames.B || "B팀";
@@ -1592,7 +1580,6 @@
       restartTimerForCurrentStep();
       updateOnlineUi();
       render();
-      if (tierProfileChanged && !els.tierModal.hidden) renderTierModal();
     }
 
     async function createOnlineRoom() {
@@ -1674,7 +1661,6 @@
       online.token = "";
       online.deadline = null;
       online.members = { A: null, B: null, spectators: 0 };
-      online.tierProfile = null;
       stopTimer();
       state = freshState();
       loadLocal();
@@ -1759,7 +1745,6 @@
         if (online.role !== "A") return showToast("온라인 방에서는 A팀 방장만 맵을 선택할 수 있습니다.");
         const result = await sendOnlineAction("set-map", { mapId });
         if (result) {
-          await publishTierProfileForMap(mapId);
           showToast(`${MAP_BY_ID.get(mapId).name} 맵으로 설정했습니다.`);
         }
         return;
@@ -1801,22 +1786,18 @@
       profile.sourceUrl = els.tierSourceUrl.value.trim().slice(0, 500);
       profile.updatedAt = els.tierUpdatedAt.value || todayString();
       saveTierProfiles();
-      if (online.active) online.tierProfile = sanitizeTierProfile(profile, state.selectedMap);
-      queueTierProfilePublish();
       renderAgents();
       renderTierSummary();
     }
 
     function moveTierAgent(agentId, tier) {
-      if (!canEditTierProfile()) return showToast("온라인 방에서는 A팀 방장만 티어표를 수정할 수 있습니다.");
+      if (!canEditTierProfile()) return showToast("먼저 밴픽할 맵을 선택해주세요.");
       const profile = localTierProfile(state.selectedMap);
       if (tier) profile.assignments[agentId] = tier;
       else delete profile.assignments[agentId];
       profile.updatedAt = els.tierUpdatedAt.value || todayString();
       saveTierProfiles();
-      if (online.active) online.tierProfile = sanitizeTierProfile(profile, state.selectedMap);
       selectedTierAgentId = "";
-      queueTierProfilePublish();
       renderTierModal();
       renderAgents();
     }
@@ -1835,17 +1816,17 @@
       const profile = activeTierProfile();
       els.tierModalTitle.textContent = `${map.name} 맵 요원 티어표`;
       els.tierModalSubtitle.textContent = online.active
-        ? `${roleLabel(online.role)} 화면 · ${editable ? "수정 내용이 방 전체에 동기화됩니다." : "A팀 방장이 만든 티어표를 보는 중입니다."}`
-        : "브라우저에 맵별로 저장되며 다음 접속에도 유지됩니다.";
+        ? `${roleLabel(online.role)} 개인 티어표 · 이 브라우저에만 저장되며 상대 팀과 공유되지 않습니다.`
+        : "이 브라우저에만 맵별로 저장되며 다음 접속에도 유지됩니다.";
       els.tierSourceName.value = profile.sourceName || "";
       els.tierSourceUrl.value = profile.sourceUrl || "";
       els.tierUpdatedAt.value = profile.updatedAt || "";
       [els.tierSourceName, els.tierSourceUrl, els.tierUpdatedAt].forEach(input => input.disabled = !editable);
       els.tierResetBtn.disabled = !editable;
       els.tierOpenSourceBtn.disabled = !profile.sourceUrl;
-      els.tierSelectionHelp.textContent = editable
-        ? (selectedTierAgentId ? `${agentById(selectedTierAgentId)?.name || "요원"} 선택됨 · 이동할 티어 줄을 누르세요.` : "요원 칩을 끌어 옮기거나, 요원을 누른 뒤 원하는 티어 줄을 누르세요.")
-        : "읽기 전용 · 온라인에서는 A팀 방장만 티어표를 수정할 수 있습니다.";
+      els.tierSelectionHelp.textContent = selectedTierAgentId
+        ? `${agentById(selectedTierAgentId)?.name || "요원"} 선택됨 · 이동할 티어 줄을 누르세요.`
+        : "개인 티어표 · 요원 칩을 끌어 옮기거나, 요원을 누른 뒤 원하는 티어 줄을 누르세요.";
       els.tierBoard.innerHTML = "";
 
       TIER_ORDER.forEach(tier => {
@@ -1913,7 +1894,8 @@
       const abilityMarkup = Array.isArray(agent.abilities) && agent.abilities.length
         ? agent.abilities.map(ability => `<div class="tooltip-skill"><div class="tooltip-skill-icon">${ability.icon ? `<img src="${escapeHtml(ability.icon)}" alt="" />` : escapeHtml(ability.slot || "SKILL")}</div><div><strong>${escapeHtml(ability.name)}</strong><p>${escapeHtml(ability.description)}</p></div></div>`).join("")
         : '<div class="tooltip-loading">인터넷에서 스킬 정보를 불러오는 중이거나 현재 사용할 수 없습니다.</div>';
-      els.agentTooltip.innerHTML = `<div class="tooltip-head"><div><div class="tooltip-name">${escapeHtml(agent.name)}</div><div class="tooltip-role" style="color:${ROLE_COLORS[agent.role]}">${escapeHtml(agent.role)}</div></div><div class="tooltip-tier${tier ? ` tier-${tier}` : ""}">${escapeHtml(tierTextForTooltip(agent))}</div></div>${agent.description ? `<div class="tooltip-description">${escapeHtml(agent.description)}</div>` : ""}<div class="tooltip-skills">${abilityMarkup}</div>`;
+      els.agentTooltip.innerHTML = `<div class="tooltip-head"><div><div class="tooltip-name">${escapeHtml(agent.name)}</div><div class="tooltip-role" style="color:${ROLE_COLORS[agent.role]}">${escapeHtml(agent.role)}</div></div><div class="tooltip-tier${tier ? ` tier-${tier}` : ""}">${escapeHtml(tierTextForTooltip(agent))}</div></div>${agent.description ? `<div class="tooltip-description">${escapeHtml(agent.description)}</div>` : ""}<div class="tooltip-skills">${abilityMarkup}</div><div class="tooltip-scroll-hint">설명이 길면 이 창 위에서 마우스 휠로 스크롤하세요</div>`;
+      els.agentTooltip.scrollTop = 0;
       els.agentTooltip.hidden = false;
       els.agentTooltip.classList.remove("show");
       requestAnimationFrame(() => {
@@ -1937,7 +1919,7 @@
         els.agentTooltip.classList.remove("show");
         setTimeout(() => { if (!els.agentTooltip.classList.contains("show")) els.agentTooltip.hidden = true; }, 130);
       };
-      if (immediate) hide(); else tooltipHideTimer = setTimeout(hide, 70);
+      if (immediate) hide(); else tooltipHideTimer = setTimeout(hide, 180);
     }
 
     function attachAgentTooltip(element, agent) {
@@ -2533,6 +2515,10 @@
         .replaceAll("'", "&#039;");
     }
 
+    els.agentTooltip.addEventListener("pointerenter", () => clearTimeout(tooltipHideTimer));
+    els.agentTooltip.addEventListener("pointerleave", () => hideAgentTooltip(false));
+    els.agentTooltip.addEventListener("wheel", event => event.stopPropagation(), { passive: true });
+
     els.onlineBtn.addEventListener("click", openOnlineModal);
     els.onlineCloseBtn.addEventListener("click", closeOnlineModal);
     els.onlineModal.addEventListener("click", event => { if (event.target === els.onlineModal) closeOnlineModal(); });
@@ -2566,8 +2552,6 @@
       profile.assignments = {};
       profile.updatedAt = todayString();
       saveTierProfiles();
-      if (online.active) online.tierProfile = sanitizeTierProfile(profile, state.selectedMap);
-      queueTierProfilePublish();
       renderTierModal();
       renderAgents();
     });
