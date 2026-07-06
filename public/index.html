@@ -1,0 +1,2014 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VALORANT 밴/픽 시스템</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --panel: #111827;
+      --panel-2: #182235;
+      --line: #2a3850;
+      --text: #f6f7fb;
+      --muted: #a9b3c6;
+      --accent: #ff4655;
+      --accent-2: #ff7b86;
+      --team-a: #46b9ff;
+      --team-b: #ffb347;
+      --good: #52d89d;
+      --danger: #ff5f6d;
+      --warning: #ffd166;
+      --disabled: #485266;
+      --shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(255, 70, 85, 0.17), transparent 31%),
+        radial-gradient(circle at 90% 16%, rgba(70, 185, 255, 0.12), transparent 30%),
+        linear-gradient(145deg, #070a11 0%, #0b1120 50%, #080b12 100%);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", Arial, sans-serif;
+      line-height: 1.45;
+    }
+
+    button, input { font: inherit; }
+    button { color: inherit; }
+
+    .app {
+      width: min(1580px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 24px 0 42px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(145deg, var(--accent), #c92339);
+      box-shadow: 0 12px 28px rgba(255, 70, 85, 0.28);
+      font-weight: 1000;
+      font-size: 22px;
+      letter-spacing: -2px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(22px, 3vw, 34px); letter-spacing: -1.2px; }
+    .subtitle { color: var(--muted); margin-top: 3px; font-size: 14px; }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .audio-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(17, 24, 39, 0.78);
+    }
+
+    .volume-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .volume-range {
+      width: 88px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(24, 34, 53, 0.86);
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: 0.18s ease;
+      font-weight: 800;
+    }
+
+    .btn:hover:not(:disabled) { transform: translateY(-1px); border-color: #526786; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); }
+    .btn.primary:hover:not(:disabled) { background: #ff5b68; }
+    .btn.warning { border-color: rgba(255, 209, 102, 0.55); color: var(--warning); }
+    .btn.danger { border-color: rgba(255, 95, 109, 0.45); color: #ff8791; }
+
+    .draft-status {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      gap: 14px;
+      align-items: stretch;
+      margin-bottom: 14px;
+    }
+
+    .team-header, .turn-card, .panel {
+      border: 1px solid rgba(80, 101, 134, 0.44);
+      border-radius: var(--radius);
+      background: linear-gradient(160deg, rgba(20, 29, 46, 0.96), rgba(12, 18, 30, 0.96));
+      box-shadow: var(--shadow);
+    }
+
+    .team-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 15px;
+      min-width: 0;
+    }
+
+    .team-header.a { border-left: 4px solid var(--team-a); }
+    .team-header.b { border-right: 4px solid var(--team-b); justify-content: flex-end; text-align: right; }
+
+    .team-tag {
+      flex: 0 0 auto;
+      width: 43px;
+      height: 43px;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      font-weight: 1000;
+      background: rgba(70, 185, 255, 0.16);
+      color: var(--team-a);
+      border: 1px solid rgba(70, 185, 255, 0.36);
+    }
+
+    .team-header.b .team-tag {
+      background: rgba(255, 179, 71, 0.16);
+      color: var(--team-b);
+      border-color: rgba(255, 179, 71, 0.38);
+    }
+
+    .team-info { min-width: 0; flex: 1; }
+    .team-name-input {
+      width: 100%;
+      min-width: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 900;
+      padding: 0;
+    }
+    .team-header.b .team-name-input { text-align: right; }
+    .team-count { color: var(--muted); font-size: 13px; margin-top: 2px; }
+
+    .turn-card {
+      width: min(480px, 38vw);
+      padding: 15px 20px;
+      text-align: center;
+      display: grid;
+      align-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .turn-card::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 4px;
+      width: var(--progress, 0%);
+      background: linear-gradient(90deg, var(--accent), #ff9ba4);
+      transition: width 0.25s ease;
+    }
+
+    .phase-label { color: var(--accent-2); font-weight: 900; font-size: 13px; }
+    .turn-title { margin-top: 3px; font-weight: 1000; font-size: clamp(17px, 2vw, 23px); }
+    .turn-help { color: var(--muted); font-size: 13px; margin-top: 3px; }
+    .timer {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin: 8px auto 0;
+      min-width: 88px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.055);
+      color: var(--muted);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+    .timer.running { color: var(--text); }
+    .timer.urgent { color: var(--danger); animation: pulse 0.65s infinite alternate; }
+    @keyframes pulse { from { opacity: 1; } to { opacity: 0.52; } }
+
+    .phase-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .phase-chip {
+      border: 1px solid var(--line);
+      background: rgba(17, 24, 39, 0.82);
+      border-radius: 12px;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+    }
+    .phase-chip.active { color: var(--text); border-color: var(--accent); background: rgba(255, 70, 85, 0.12); }
+    .phase-chip.done { color: var(--good); border-color: rgba(82, 216, 157, 0.32); }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr) 280px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .panel { padding: 15px; }
+    .panel-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .panel-title h2 { font-size: 16px; letter-spacing: -0.4px; }
+    .mini { color: var(--muted); font-size: 12px; }
+
+    .pick-list { display: grid; gap: 8px; }
+    .pick-slot {
+      min-height: 54px;
+      border: 1px dashed #35445d;
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.025);
+      padding: 9px 11px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pick-slot.filled { border-style: solid; background: rgba(255, 255, 255, 0.045); }
+    .slot-num {
+      width: 29px;
+      height: 29px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.055);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+    .mini-portrait {
+      position: relative;
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      overflow: hidden;
+      flex: 0 0 auto;
+      background: linear-gradient(145deg, #28364d, #151d2b);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: grid;
+      place-items: center;
+    }
+    .mini-portrait img {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 5px 6px rgba(0,0,0,.32));
+    }
+    .portrait-fallback {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-weight: 1000;
+      color: rgba(255,255,255,.72);
+      font-size: 13px;
+    }
+    .slot-info { min-width: 0; }
+    .slot-name { font-weight: 900; }
+    .slot-role { color: var(--muted); font-size: 12px; }
+    .empty-text { color: #68758b; font-size: 13px; }
+
+    .role-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+    .role-filter {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 11px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 12px;
+    }
+    .role-filter.active { color: var(--text); background: #25334a; border-color: #526786; }
+
+    .agents-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(110px, 1fr));
+      gap: 9px;
+    }
+
+    .agent-card {
+      position: relative;
+      min-height: 150px;
+      border: 1px solid #2d3a50;
+      border-radius: 14px;
+      background: linear-gradient(145deg, rgba(34, 47, 68, 0.96), rgba(21, 29, 43, 0.96));
+      padding: 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: 0.16s ease;
+      overflow: hidden;
+      isolation: isolate;
+    }
+    .agent-card::before {
+      content: "";
+      position: absolute;
+      inset: auto -20px -38px auto;
+      width: 112px;
+      height: 112px;
+      border-radius: 50%;
+      background: var(--role-color, rgba(255,255,255,.08));
+      opacity: 0.2;
+      z-index: -1;
+    }
+    .agent-card::after {
+      content: "";
+      position: absolute;
+      inset: 42% 0 0;
+      background: linear-gradient(transparent, rgba(10, 14, 23, .94) 64%);
+      z-index: 1;
+      pointer-events: none;
+    }
+    .agent-portrait {
+      position: absolute;
+      left: 50%;
+      top: 7px;
+      width: 104px;
+      height: 104px;
+      transform: translateX(-50%);
+      object-fit: contain;
+      z-index: 0;
+      filter: drop-shadow(0 9px 9px rgba(0,0,0,.42));
+      transition: transform .18s ease, filter .18s ease;
+    }
+    .agent-card:hover:not(:disabled) .agent-portrait {
+      transform: translateX(-50%) scale(1.06);
+      filter: drop-shadow(0 11px 12px rgba(0,0,0,.55));
+    }
+    .agent-card .agent-portrait-fallback {
+      position: absolute;
+      left: 50%;
+      top: 22px;
+      width: 68px;
+      height: 68px;
+      transform: translateX(-50%);
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--role-color) 22%, #111827);
+      color: rgba(255,255,255,.76);
+      font-size: 22px;
+      font-weight: 1000;
+      z-index: -1;
+    }
+    .agent-card:hover:not(:disabled) {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+      box-shadow: 0 10px 22px rgba(0,0,0,.23);
+    }
+    .agent-card:disabled { cursor: not-allowed; opacity: 0.38; filter: saturate(0.55); }
+    .agent-card.selected-a { border-color: var(--team-a); opacity: 0.76; }
+    .agent-card.selected-b { border-color: var(--team-b); opacity: 0.76; }
+    .agent-card.banned { border-color: var(--danger); opacity: 0.52; }
+    .agent-card.unbanned { box-shadow: inset 0 0 0 1px rgba(82, 216, 157, 0.65); }
+    .agent-name { font-size: 15px; font-weight: 1000; position: absolute; z-index: 3; left: 12px; right: 8px; bottom: 27px; }
+    .agent-role { color: var(--muted); font-size: 11px; position: absolute; z-index: 3; left: 12px; right: 8px; bottom: 10px; }
+    .agent-status {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      border-radius: 999px;
+      padding: 3px 6px;
+      background: rgba(4, 7, 12, 0.8);
+      font-size: 9px;
+      font-weight: 1000;
+      letter-spacing: 0.2px;
+      z-index: 2;
+    }
+    .status-a { color: var(--team-a); }
+    .status-b { color: var(--team-b); }
+    .status-ban { color: #ff8d97; }
+    .status-ban-1 { color: #ff8d97; }
+    .status-ban-2 { color: #c7a3ff; }
+    .status-unban { color: var(--good); }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px 14px;
+      margin-top: 12px;
+      padding-top: 11px;
+      border-top: 1px solid rgba(68, 83, 108, 0.5);
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    .side-section + .side-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(68, 83, 108, 0.52); }
+    .ban-list, .history-list { display: grid; gap: 7px; }
+    .ban-row, .history-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 9px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.035);
+      font-size: 12px;
+    }
+    .ban-row.unbanned { opacity: 0.57; text-decoration: line-through; }
+    .ban-role { color: var(--muted); font-size: 11px; }
+    .team-a-text { color: var(--team-a); font-weight: 900; }
+    .team-b-text { color: var(--team-b); font-weight: 900; }
+    .ban-text { color: #ff8d97; font-weight: 900; }
+    .unban-text { color: var(--good); font-weight: 900; }
+    .history-list { max-height: 310px; overflow: auto; padding-right: 3px; }
+    .history-row { grid-template-columns: 24px 1fr; }
+    .history-index { color: #69768a; font-weight: 900; }
+
+    .rules {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .rules strong { color: var(--text); }
+    .rules p + p { margin-top: 7px; }
+
+    .app-footer {
+      margin-top: 14px;
+      text-align: center;
+      color: #6f7c91;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translate(-50%, 18px);
+      padding: 11px 16px;
+      border: 1px solid #536681;
+      border-radius: 12px;
+      background: rgba(13, 19, 30, 0.96);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.2s ease;
+      z-index: 50;
+      font-weight: 800;
+      font-size: 13px;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    .completed-banner {
+      display: none;
+      margin-bottom: 14px;
+      padding: 14px 18px;
+      border: 1px solid rgba(82, 216, 157, 0.42);
+      border-radius: 15px;
+      background: rgba(82, 216, 157, 0.1);
+      color: #9ff0c9;
+      text-align: center;
+      font-weight: 1000;
+    }
+    .completed-banner.show { display: block; }
+
+    @media (max-width: 1120px) {
+      .main-grid { grid-template-columns: 230px minmax(0, 1fr); }
+      .right-panel { grid-column: 1 / -1; }
+      .agents-grid { grid-template-columns: repeat(4, minmax(105px, 1fr)); }
+    }
+
+    @media (max-width: 780px) {
+      .app { width: min(100% - 18px, 1580px); padding-top: 12px; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .actions { justify-content: flex-start; }
+      .draft-status { grid-template-columns: 1fr 1fr; }
+      .turn-card { grid-column: 1 / -1; grid-row: 1; width: 100%; }
+      .team-header { grid-row: 2; }
+      .phase-strip { grid-template-columns: 1fr 1fr; }
+      .main-grid { grid-template-columns: 1fr; }
+      .left-panel, .right-panel { grid-column: auto; }
+      .agents-grid { grid-template-columns: repeat(3, minmax(90px, 1fr)); }
+    }
+
+    @media (max-width: 470px) {
+      .brand-mark { width: 42px; height: 42px; }
+      .actions .btn { padding: 9px 10px; font-size: 12px; }
+      .agents-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .agent-card { min-height: 140px; }
+      .volume-range { width: 68px; }
+      .team-header { padding: 11px; }
+      .team-tag { width: 36px; height: 36px; }
+      .team-name-input { font-size: 15px; }
+    }
+
+
+    /* 한 화면에 더 많은 요원을 표시하는 컴팩트 레이아웃 */
+    .app { width: min(1760px, calc(100% - 18px)); padding: 12px 0 20px; }
+    .topbar { gap: 10px; margin-bottom: 9px; }
+    .brand { gap: 9px; }
+    .brand-mark { width: 40px; height: 40px; border-radius: 11px; font-size: 18px; }
+    h1 { font-size: clamp(20px, 2.2vw, 28px); }
+    .subtitle { font-size: 12px; }
+    .actions { gap: 5px; }
+    .audio-control { min-height: 34px; padding: 3px 6px; gap: 5px; }
+    .volume-range { width: 65px; }
+    .btn { padding: 7px 10px; border-radius: 9px; font-size: 12px; }
+    .draft-status { gap: 8px; margin-bottom: 8px; }
+    .team-header { padding: 8px 10px; gap: 8px; }
+    .team-tag { width: 34px; height: 34px; border-radius: 9px; }
+    .team-name-input { font-size: 15px; }
+    .team-count { font-size: 11px; }
+    .turn-card { width: min(430px, 38vw); padding: 8px 13px; }
+    .phase-label { font-size: 11px; }
+    .turn-title { margin-top: 1px; font-size: clamp(15px, 1.6vw, 19px); }
+    .turn-help { margin-top: 1px; font-size: 11px; }
+    .timer { margin-top: 4px; min-width: 76px; padding: 3px 8px; font-size: 12px; }
+    .phase-strip { gap: 5px; margin-bottom: 8px; }
+    .phase-chip { padding: 6px 8px; border-radius: 9px; font-size: 11px; }
+    .main-grid { grid-template-columns: 205px minmax(0, 1fr) 205px; gap: 8px; }
+    .panel { padding: 9px; border-radius: 13px; }
+    .panel-title { margin-bottom: 6px; }
+    .panel-title h2 { font-size: 13px; }
+    .mini { font-size: 10px; }
+    .pick-list { gap: 4px; }
+    .pick-slot { min-height: 40px; padding: 4px 6px; gap: 6px; border-radius: 9px; }
+    .slot-num { width: 23px; height: 23px; border-radius: 7px; font-size: 10px; }
+    .mini-portrait { width: 28px; height: 28px; border-radius: 8px; }
+    .slot-name { font-size: 12px; }
+    .slot-role, .empty-text { font-size: 10px; }
+    .side-section + .side-section { margin-top: 8px; padding-top: 8px; }
+    .ban-list, .history-list { gap: 4px; }
+    .ban-row, .history-row { padding: 4px 6px; gap: 5px; border-radius: 8px; font-size: 10px; }
+    .ban-role { font-size: 9px; }
+    .history-list { max-height: 170px; }
+    .history-row { grid-template-columns: 18px 1fr; }
+    .role-filters { gap: 4px; margin-bottom: 6px; }
+    .role-filter { padding: 4px 8px; font-size: 10px; }
+    .agents-grid { grid-template-columns: repeat(auto-fit, minmax(86px, 1fr)); gap: 5px; }
+    .agent-card { min-height: 96px; padding: 6px; border-radius: 10px; }
+    .agent-card::before { width: 78px; height: 78px; }
+    .agent-card::after { inset: 40% 0 0; }
+    .agent-portrait { top: 1px; width: 68px; height: 68px; }
+    .agent-card .agent-portrait-fallback { top: 14px; width: 45px; height: 45px; font-size: 16px; }
+    .agent-name { left: 7px; right: 5px; bottom: 18px; font-size: 12px; }
+    .agent-role { left: 7px; right: 5px; bottom: 5px; font-size: 9px; }
+    .agent-status { top: 4px; right: 4px; padding: 2px 4px; font-size: 7px; }
+    .legend { gap: 5px 9px; margin-top: 6px; padding-top: 6px; font-size: 9px; }
+    .rules { margin-top: 6px; font-size: 10px; }
+    .compact-rules summary { cursor: pointer; color: var(--muted); font-weight: 800; }
+    .compact-rules[open] summary { margin-bottom: 5px; }
+    .app-footer { margin-top: 8px; font-size: 9px; }
+    .completed-banner { margin-bottom: 8px; padding: 8px 12px; font-size: 12px; }
+
+    .online-btn { display: inline-flex; align-items: center; gap: 6px; }
+    .connection-dot { width: 8px; height: 8px; border-radius: 50%; background: #667085; box-shadow: 0 0 0 3px rgba(102,112,133,.14); }
+    .online-btn.connected .connection-dot, .connection-dot.connected { background: var(--good); box-shadow: 0 0 0 3px rgba(82,216,157,.15); }
+    .connection-dot.large { width: 12px; height: 12px; flex: 0 0 auto; }
+    .modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; background: rgba(3,7,14,.78); backdrop-filter: blur(8px); }
+    .modal-backdrop[hidden] { display: none; }
+    .online-modal { width: min(520px, 100%); border: 1px solid #40516d; border-radius: 17px; background: linear-gradient(160deg,#162136,#0d1422); box-shadow: 0 28px 80px rgba(0,0,0,.48); padding: 16px; }
+    .online-modal-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+    .online-modal-head h2 { font-size: 20px; }
+    .online-modal-head p { color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .modal-close { border: 0; background: transparent; color: var(--muted); font-size: 28px; line-height: 1; cursor: pointer; }
+    .online-status-card { display: flex; gap: 10px; align-items: center; margin: 13px 0; padding: 10px; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.035); }
+    .online-status-card p { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .field-label { display: block; color: var(--muted); font-size: 11px; font-weight: 900; margin-bottom: 5px; }
+    .room-row { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+    .room-input { width: 100%; border: 1px solid var(--line); border-radius: 9px; background: #0d1422; color: var(--text); padding: 8px 10px; text-transform: uppercase; letter-spacing: 3px; font-weight: 1000; outline: none; }
+    .room-input:focus { border-color: var(--accent); }
+    .online-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+    .room-members { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; margin-top: 10px; }
+    .room-members > div { padding: 8px; border-radius: 9px; background: rgba(255,255,255,.035); text-align: center; }
+    .room-members span { display: block; color: var(--muted); font-size: 9px; }
+    .room-members strong { display: block; margin-top: 2px; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .online-note { color: #7f8da4; font-size: 10px; margin-top: 10px; line-height: 1.5; }
+    .remote-lock { opacity: .72; }
+
+    @media (max-width: 1280px) {
+      .main-grid { grid-template-columns: 185px minmax(0,1fr) 185px; }
+      .right-panel { grid-column: auto; }
+      .agents-grid { grid-template-columns: repeat(auto-fit, minmax(82px,1fr)); }
+    }
+
+    @media (max-height: 850px) and (min-width: 901px) {
+      .app { padding-bottom: 4px; }
+      .app-footer { display: none; }
+      .agent-card { min-height: 86px; }
+      .agent-portrait { width: 59px; height: 59px; }
+      .agent-card .agent-portrait-fallback { top: 12px; width: 41px; height: 41px; }
+      .agent-name { bottom: 16px; }
+      .agent-role { bottom: 4px; }
+    }
+
+    @media (max-width: 900px) {
+      .main-grid { grid-template-columns: 170px minmax(0,1fr); }
+      .right-panel { grid-column: 1 / -1; }
+      .agents-grid { grid-template-columns: repeat(auto-fit, minmax(80px,1fr)); }
+    }
+
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">V</div>
+        <div>
+          <h1>VALORANT 밴/픽 시스템</h1>
+          <p class="subtitle">온라인 대전 · 1차/2차 밴 · 안티밴 · 중복 픽 금지</p>
+        </div>
+      </div>
+      <div class="actions">
+        <div class="audio-control" title="외부 음원 없이 브라우저가 직접 생성하는 저작권 걱정 없는 BGM입니다.">
+          <button class="btn" id="musicBtn" type="button">♪ BGM 재생</button>
+          <label class="volume-label" for="volumeRange">음량</label>
+          <input class="volume-range" id="volumeRange" type="range" min="0" max="100" value="30" aria-label="BGM 음량" />
+        </div>
+        <button class="btn online-btn" id="onlineBtn" type="button"><span class="connection-dot"></span><span id="onlineBtnText">온라인 연결</span></button>
+        <button class="btn primary" id="startBtn">드래프트 시작</button>
+        <button class="btn warning" id="randomBtn" disabled>현재 선택 랜덤</button>
+        <button class="btn" id="undoBtn" disabled>되돌리기</button>
+        <button class="btn" id="copyBtn" disabled>결과 복사</button>
+        <button class="btn danger" id="resetBtn">초기화</button>
+      </div>
+    </header>
+
+    <div id="completedBanner" class="completed-banner">드래프트가 완료되었습니다. 결과 복사 버튼으로 정리된 내용을 복사할 수 있습니다.</div>
+
+    <section class="draft-status">
+      <div class="team-header a">
+        <div class="team-tag">A</div>
+        <div class="team-info">
+          <input class="team-name-input" id="teamAName" value="A팀" maxlength="20" aria-label="A팀 이름" />
+          <div class="team-count" id="teamACount">픽 0 / 5</div>
+        </div>
+      </div>
+
+      <div class="turn-card" id="turnCard">
+        <div class="phase-label" id="phaseLabel">대기 중</div>
+        <div class="turn-title" id="turnTitle">드래프트 시작을 눌러주세요</div>
+        <div class="turn-help" id="turnHelp">초기 밴은 각 선택마다 30초가 주어집니다.</div>
+        <div class="timer" id="timer">준비</div>
+      </div>
+
+      <div class="team-header b">
+        <div class="team-info">
+          <input class="team-name-input" id="teamBName" value="B팀" maxlength="20" aria-label="B팀 이름" />
+          <div class="team-count" id="teamBCount">픽 0 / 5</div>
+        </div>
+        <div class="team-tag">B</div>
+      </div>
+    </section>
+
+    <nav class="phase-strip" id="phaseStrip" aria-label="드래프트 단계">
+      <div class="phase-chip" data-phase="1">1. 1차 밴</div>
+      <div class="phase-chip" data-phase="2">2. 1차 픽</div>
+      <div class="phase-chip" data-phase="3">3. 2차 밴·안티밴</div>
+      <div class="phase-chip" data-phase="4">4. 2차 픽</div>
+    </nav>
+
+    <section class="main-grid">
+      <aside class="panel left-panel">
+        <div class="panel-title">
+          <h2 id="teamAPanelTitle">A팀 선택</h2>
+          <span class="mini">5명</span>
+        </div>
+        <div class="pick-list" id="teamAPicks"></div>
+
+        <div class="side-section">
+          <div class="panel-title"><h2>1차 밴</h2><span class="mini">포지션별 1명</span></div>
+          <div class="ban-list" id="initialBanList"></div>
+        </div>
+      </aside>
+
+      <section class="panel agent-panel">
+        <div class="panel-title">
+          <h2>요원 목록</h2>
+          <span class="mini" id="eligibleCount">선택 가능 0명</span>
+        </div>
+        <div class="role-filters" id="roleFilters"></div>
+        <div class="agents-grid" id="agentsGrid"></div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--team-a)"></i>A팀 픽</span>
+          <span><i class="dot" style="background:var(--team-b)"></i>B팀 픽</span>
+          <span><i class="dot" style="background:var(--danger)"></i>현재 밴</span>
+          <span><i class="dot" style="background:var(--good)"></i>밴 해제</span>
+        </div>
+        <details class="rules compact-rules">
+          <summary>규칙 보기</summary>
+          <p><strong>1차 밴:</strong> 타격대·감시자·척후대·전략가에서 정확히 한 명씩만 밴됩니다.</p>
+          <p><strong>중복 금지:</strong> 어느 팀이든 이미 픽한 요원은 양 팀 모두 다시 픽하거나 2차 밴할 수 없습니다.</p>
+          <p><strong>안티밴:</strong> 1차 밴 4명만 해제할 수 있으며, 2차 밴 2명은 해제할 수 없습니다.</p>
+        </details>
+      </section>
+
+      <aside class="panel right-panel">
+        <div class="panel-title">
+          <h2 id="teamBPanelTitle">B팀 선택</h2>
+          <span class="mini">5명</span>
+        </div>
+        <div class="pick-list" id="teamBPicks"></div>
+
+        <div class="side-section">
+          <div class="panel-title"><h2>2차 밴</h2><span class="mini">해제 불가</span></div>
+          <div class="ban-list" id="extraBanList"></div>
+        </div>
+
+        <div class="side-section">
+          <div class="panel-title"><h2>진행 기록</h2><span class="mini" id="historyCount">0 / 18</span></div>
+          <div class="history-list" id="historyList"></div>
+        </div>
+      </aside>
+    </section>
+    <footer class="app-footer">
+      요원 초상화는 인터넷 연결 시 불러옵니다. 온라인 대전은 Node.js 서버 실행 시 활성화되며, BGM은 Web Audio API로 실시간 생성되는 밝은 e스포츠 로비풍 음악입니다.<br />
+      VALORANT 및 관련 자산은 Riot Games의 소유이며, 이 도구는 Riot Games와 제휴하거나 후원받지 않았습니다.
+    </footer>
+  </main>
+
+  <div class="modal-backdrop" id="onlineModal" hidden>
+    <section class="online-modal" role="dialog" aria-modal="true" aria-labelledby="onlineModalTitle">
+      <div class="online-modal-head">
+        <div>
+          <h2 id="onlineModalTitle">온라인 대전</h2>
+          <p>같은 주소로 접속한 상대와 방 코드를 공유해 실시간으로 밴/픽합니다.</p>
+        </div>
+        <button class="modal-close" id="onlineCloseBtn" type="button" aria-label="닫기">×</button>
+      </div>
+      <div class="online-status-card">
+        <span class="connection-dot large" id="modalConnectionDot"></span>
+        <div><strong id="onlineStatusTitle">오프라인 모드</strong><p id="onlineStatusText">서버로 실행하면 온라인 방을 만들 수 있습니다.</p></div>
+      </div>
+      <label class="field-label" for="roomCodeInput">방 코드</label>
+      <div class="room-row">
+        <input id="roomCodeInput" class="room-input" maxlength="6" placeholder="예: A7K2Q9" autocomplete="off" />
+        <button class="btn" id="copyRoomBtn" type="button" disabled>코드 복사</button>
+      </div>
+      <div class="online-actions-grid">
+        <button class="btn primary" id="createRoomBtn" type="button">방 만들기 · A팀</button>
+        <button class="btn" id="joinAReBtn" type="button">A팀 재접속</button>
+        <button class="btn" id="joinBBtn" type="button">B팀으로 참가</button>
+        <button class="btn" id="joinSpectatorBtn" type="button">관전으로 참가</button>
+        <button class="btn danger" id="leaveRoomBtn" type="button" disabled>방 나가기</button>
+      </div>
+      <div class="room-members" id="roomMembers">
+        <div><span>A팀</span><strong>비어 있음</strong></div>
+        <div><span>B팀</span><strong>비어 있음</strong></div>
+        <div><span>관전자</span><strong>0명</strong></div>
+      </div>
+      <p class="online-note">온라인 모드는 이 HTML을 Node.js 서버로 실행했을 때 활성화됩니다. A팀이 방장으로 드래프트 시작·되돌리기·초기화를 관리합니다.</p>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    "use strict";
+
+    const ROLES = ["타격대", "감시자", "척후대", "전략가"];
+    const ROLE_COLORS = {
+      "타격대": "#ff6b7a",
+      "감시자": "#72d8a5",
+      "척후대": "#a58cff",
+      "전략가": "#64b8ff"
+    };
+
+    // 2026년 7월 공식 발로란트 요원 목록 기준. 초상화는 실행 시 공개 콘텐츠 API에서 불러옵니다.
+    const AGENTS = [
+      { id: "jett", name: "제트", role: "타격대" },
+      { id: "phoenix", name: "피닉스", role: "타격대" },
+      { id: "raze", name: "레이즈", role: "타격대" },
+      { id: "reyna", name: "레이나", role: "타격대" },
+      { id: "yoru", name: "요루", role: "타격대" },
+      { id: "neon", name: "네온", role: "타격대" },
+      { id: "iso", name: "아이소", role: "타격대" },
+      { id: "waylay", name: "웨이레이", role: "타격대" },
+
+      { id: "sage", name: "세이지", role: "감시자" },
+      { id: "cypher", name: "사이퍼", role: "감시자" },
+      { id: "killjoy", name: "킬조이", role: "감시자" },
+      { id: "chamber", name: "체임버", role: "감시자" },
+      { id: "deadlock", name: "데드록", role: "감시자" },
+      { id: "vyse", name: "바이스", role: "감시자" },
+      { id: "veto", name: "비토", role: "감시자" },
+
+      { id: "sova", name: "소바", role: "척후대" },
+      { id: "breach", name: "브리치", role: "척후대" },
+      { id: "skye", name: "스카이", role: "척후대" },
+      { id: "kayo", name: "케이/오", role: "척후대" },
+      { id: "fade", name: "페이드", role: "척후대" },
+      { id: "gekko", name: "게코", role: "척후대" },
+      { id: "tejo", name: "테호", role: "척후대" },
+
+      { id: "brimstone", name: "브림스톤", role: "전략가" },
+      { id: "viper", name: "바이퍼", role: "전략가" },
+      { id: "omen", name: "오멘", role: "전략가" },
+      { id: "astra", name: "아스트라", role: "전략가" },
+      { id: "harbor", name: "하버", role: "전략가" },
+      { id: "clove", name: "클로브", role: "전략가" },
+      { id: "miks", name: "믹스", role: "전략가" }
+    ];
+
+    const STEPS = [
+      { phase: 1, team: "A", type: "initial-ban", label: "1차 밴", help: "남아 있는 포지션에서 요원 1명을 밴하세요.", timed: true },
+      { phase: 1, team: "B", type: "initial-ban", label: "1차 밴 1/2", help: "남아 있는 포지션에서 첫 번째 요원을 밴하세요.", timed: true },
+      { phase: 1, team: "B", type: "initial-ban", label: "1차 밴 2/2", help: "남아 있는 포지션에서 두 번째 요원을 밴하세요.", timed: true },
+      { phase: 1, team: "A", type: "initial-ban", label: "1차 밴", help: "마지막 남은 포지션에서 요원 1명을 밴하세요.", timed: true },
+
+      { phase: 2, team: "A", type: "pick", label: "1차 픽", help: "사용 가능한 요원 1명을 선택하세요." },
+      { phase: 2, team: "B", type: "pick", label: "1차 픽 1/2", help: "첫 번째 요원을 선택하세요." },
+      { phase: 2, team: "B", type: "pick", label: "1차 픽 2/2", help: "두 번째 요원을 선택하세요." },
+      { phase: 2, team: "A", type: "pick", label: "1차 픽 1/2", help: "첫 번째 요원을 선택하세요." },
+      { phase: 2, team: "A", type: "pick", label: "1차 픽 2/2", help: "두 번째 요원을 선택하세요." },
+      { phase: 2, team: "B", type: "pick", label: "1차 픽", help: "사용 가능한 요원 1명을 선택하세요." },
+
+      { phase: 3, team: "B", type: "extra-ban", label: "2차 밴", help: "픽되지 않은 요원 1명을 추가로 밴하세요." },
+      { phase: 3, team: "A", type: "extra-ban", label: "2차 밴", help: "픽되지 않은 요원 1명을 추가로 밴하세요." },
+      { phase: 3, team: "A", type: "unban", label: "안티밴", help: "1차 밴 요원 중 1명의 밴을 해제하세요." },
+      { phase: 3, team: "B", type: "unban", label: "안티밴", help: "남아 있는 1차 밴 요원 중 1명의 밴을 해제하세요." },
+
+      { phase: 4, team: "B", type: "pick", label: "2차 픽", help: "사용 가능한 요원 1명을 선택하세요." },
+      { phase: 4, team: "A", type: "pick", label: "2차 픽 1/2", help: "첫 번째 요원을 선택하세요." },
+      { phase: 4, team: "A", type: "pick", label: "2차 픽 2/2", help: "두 번째 요원을 선택하세요." },
+      { phase: 4, team: "B", type: "pick", label: "2차 픽", help: "마지막 요원을 선택하세요." }
+    ];
+
+    const els = {
+      musicBtn: document.getElementById("musicBtn"),
+      volumeRange: document.getElementById("volumeRange"),
+      onlineBtn: document.getElementById("onlineBtn"),
+      onlineBtnText: document.getElementById("onlineBtnText"),
+      onlineModal: document.getElementById("onlineModal"),
+      onlineCloseBtn: document.getElementById("onlineCloseBtn"),
+      modalConnectionDot: document.getElementById("modalConnectionDot"),
+      onlineStatusTitle: document.getElementById("onlineStatusTitle"),
+      onlineStatusText: document.getElementById("onlineStatusText"),
+      roomCodeInput: document.getElementById("roomCodeInput"),
+      copyRoomBtn: document.getElementById("copyRoomBtn"),
+      createRoomBtn: document.getElementById("createRoomBtn"),
+      joinAReBtn: document.getElementById("joinAReBtn"),
+      joinBBtn: document.getElementById("joinBBtn"),
+      joinSpectatorBtn: document.getElementById("joinSpectatorBtn"),
+      leaveRoomBtn: document.getElementById("leaveRoomBtn"),
+      roomMembers: document.getElementById("roomMembers"),
+      startBtn: document.getElementById("startBtn"),
+      randomBtn: document.getElementById("randomBtn"),
+      undoBtn: document.getElementById("undoBtn"),
+      copyBtn: document.getElementById("copyBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+      teamAName: document.getElementById("teamAName"),
+      teamBName: document.getElementById("teamBName"),
+      teamACount: document.getElementById("teamACount"),
+      teamBCount: document.getElementById("teamBCount"),
+      teamAPanelTitle: document.getElementById("teamAPanelTitle"),
+      teamBPanelTitle: document.getElementById("teamBPanelTitle"),
+      teamAPicks: document.getElementById("teamAPicks"),
+      teamBPicks: document.getElementById("teamBPicks"),
+      initialBanList: document.getElementById("initialBanList"),
+      extraBanList: document.getElementById("extraBanList"),
+      historyList: document.getElementById("historyList"),
+      historyCount: document.getElementById("historyCount"),
+      roleFilters: document.getElementById("roleFilters"),
+      agentsGrid: document.getElementById("agentsGrid"),
+      eligibleCount: document.getElementById("eligibleCount"),
+      phaseLabel: document.getElementById("phaseLabel"),
+      turnTitle: document.getElementById("turnTitle"),
+      turnHelp: document.getElementById("turnHelp"),
+      timer: document.getElementById("timer"),
+      turnCard: document.getElementById("turnCard"),
+      phaseStrip: document.getElementById("phaseStrip"),
+      completedBanner: document.getElementById("completedBanner"),
+      toast: document.getElementById("toast")
+    };
+
+    let state = freshState();
+    let activeRoleFilter = "전체";
+    let timerInterval = null;
+    let toastTimer = null;
+    let online = {
+      serverAvailable: false,
+      active: false,
+      roomCode: "",
+      role: null,
+      token: "",
+      deadline: null,
+      members: { A: null, B: null, spectators: 0 },
+      pollTimer: null,
+      pollBusy: false
+    };
+
+    // 저작권 음원을 사용하지 않는 실시간 합성 BGM 상태
+    let audioContext = null;
+    let masterGain = null;
+    let musicNodes = [];
+    let musicPulseTimer = null;
+    let musicStep = 0;
+    let musicPlaying = false;
+
+    function normalizeAgentKey(value) {
+      return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+
+    async function loadAgentPortraits() {
+      try {
+        const response = await fetch("https://valorant-api.com/v1/agents?isPlayableCharacter=true&language=en-US", { cache: "force-cache" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        const remoteAgents = Array.isArray(payload.data) ? payload.data : [];
+        const portraitMap = new Map();
+        remoteAgents.forEach(remote => {
+          if (!remote || !remote.displayName || !remote.displayIcon) return;
+          portraitMap.set(normalizeAgentKey(remote.displayName), remote.displayIcon);
+        });
+        AGENTS.forEach(agent => {
+          const portrait = portraitMap.get(normalizeAgentKey(agent.id)) || portraitMap.get(normalizeAgentKey(agent.name));
+          if (portrait) agent.portrait = portrait;
+        });
+        render();
+      } catch (error) {
+        console.warn("요원 초상화를 불러오지 못했습니다. 텍스트 모드로 계속합니다.", error);
+      }
+    }
+
+    function portraitMarkup(agent, className = "mini-portrait") {
+      const initial = escapeHtml(agent.name.slice(0, 1));
+      const image = agent.portrait
+        ? `<img src="${escapeHtml(agent.portrait)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">`
+        : "";
+      return `<span class="${className}"><span class="portrait-fallback">${initial}</span>${image}</span>`;
+    }
+
+    function getSavedVolume() {
+      try {
+        const saved = Number(localStorage.getItem("valorantDraftBgmVolume"));
+        return Number.isFinite(saved) && saved >= 0 && saved <= 100 ? saved : 30;
+      } catch (error) {
+        return 30;
+      }
+    }
+
+    function volumeGainValue() {
+      const normalized = Number(els.volumeRange.value) / 100;
+      return Math.pow(normalized, 1.65) * 0.18;
+    }
+
+    function updateMasterVolume(smooth = true) {
+      if (!masterGain || !audioContext) return;
+      const target = musicPlaying ? volumeGainValue() : 0.0001;
+      const now = audioContext.currentTime;
+      masterGain.gain.cancelScheduledValues(now);
+      if (smooth) masterGain.gain.setTargetAtTime(target, now, 0.06);
+      else masterGain.gain.setValueAtTime(target, now);
+    }
+
+    function makeNoiseBuffer(context, seconds = 2) {
+      const length = Math.max(1, Math.floor(context.sampleRate * seconds));
+      const buffer = context.createBuffer(1, length, context.sampleRate);
+      const channel = buffer.getChannelData(0);
+      let last = 0;
+      for (let i = 0; i < length; i += 1) {
+        const white = Math.random() * 2 - 1;
+        last = last * 0.985 + white * 0.015;
+        channel[i] = last;
+      }
+      return buffer;
+    }
+
+    function connectMusicNode(node) {
+      musicNodes.push(node);
+      return node;
+    }
+
+    function schedulePulse() {
+      if (!musicPlaying || !audioContext || !masterGain) return;
+      const now = audioContext.currentTime + 0.02;
+
+      // 밝은 메이저 펜타토닉 아르페지오. 긴장감은 리듬으로 만들고
+      // 공포감을 주던 초저음·노이즈·불협화음은 사용하지 않습니다.
+      const melody = [130.81, 164.81, 196.00, 220.00, 196.00, 164.81, 146.83, 174.61];
+      const freq = melody[musicStep % melody.length];
+
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const filter = audioContext.createBiquadFilter();
+      osc.type = musicStep % 2 === 0 ? "triangle" : "sine";
+      osc.frequency.setValueAtTime(freq, now);
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(1450, now);
+      filter.Q.value = 0.45;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.072, now + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.34);
+      osc.connect(filter).connect(gain).connect(masterGain);
+      osc.start(now);
+      osc.stop(now + 0.38);
+
+      // 네 박자마다 부드러운 중저음 펄스를 더해 밴/픽의 박진감만 유지합니다.
+      if (musicStep % 4 === 0) {
+        const bass = audioContext.createOscillator();
+        const bassGain = audioContext.createGain();
+        bass.type = "sine";
+        bass.frequency.setValueAtTime(musicStep % 8 === 0 ? 65.41 : 73.42, now);
+        bassGain.gain.setValueAtTime(0.0001, now);
+        bassGain.gain.exponentialRampToValueAtTime(0.075, now + 0.025);
+        bassGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+        bass.connect(bassGain).connect(masterGain);
+        bass.start(now);
+        bass.stop(now + 0.42);
+      }
+
+      // 한 마디 끝에는 짧은 반짝임을 넣어 로비 음악 같은 느낌을 냅니다.
+      if (musicStep % 8 === 7) {
+        const bell = audioContext.createOscillator();
+        const bellGain = audioContext.createGain();
+        bell.type = "sine";
+        bell.frequency.setValueAtTime(523.25, now);
+        bellGain.gain.setValueAtTime(0.0001, now);
+        bellGain.gain.exponentialRampToValueAtTime(0.028, now + 0.015);
+        bellGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.62);
+        bell.connect(bellGain).connect(masterGain);
+        bell.start(now);
+        bell.stop(now + 0.68);
+      }
+
+      musicStep += 1;
+    }
+
+    async function startMusic() {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) {
+        showToast("이 브라우저는 BGM 재생을 지원하지 않습니다.");
+        return;
+      }
+
+      if (!audioContext || audioContext.state === "closed") {
+        audioContext = new AudioCtx();
+        masterGain = audioContext.createGain();
+        const compressor = audioContext.createDynamicsCompressor();
+        compressor.threshold.value = -18;
+        compressor.knee.value = 18;
+        compressor.ratio.value = 5;
+        compressor.attack.value = 0.015;
+        compressor.release.value = 0.4;
+        masterGain.connect(compressor).connect(audioContext.destination);
+
+        const padFilter = audioContext.createBiquadFilter();
+        padFilter.type = "lowpass";
+        padFilter.frequency.value = 1050;
+        padFilter.Q.value = 0.5;
+        padFilter.connect(masterGain);
+
+        // C 메이저 add9 패드: 어둡지 않고 넓게 들리는 기본 배경 코드입니다.
+        [65.41, 82.41, 98.00, 146.83].forEach((frequency, index) => {
+          const osc = connectMusicNode(audioContext.createOscillator());
+          const gain = connectMusicNode(audioContext.createGain());
+          osc.type = index < 2 ? "sine" : "triangle";
+          osc.frequency.value = frequency;
+          osc.detune.value = [-3, 2, -2, 3][index];
+          gain.gain.value = [0.026, 0.018, 0.014, 0.009][index];
+          osc.connect(gain).connect(padFilter);
+          osc.start();
+        });
+
+        // 아주 느리고 얕은 필터 움직임만 넣어 정적인 느낌을 줄입니다.
+        const lfo = connectMusicNode(audioContext.createOscillator());
+        const lfoGain = connectMusicNode(audioContext.createGain());
+        lfo.type = "sine";
+        lfo.frequency.value = 0.09;
+        lfoGain.gain.value = 110;
+        lfo.connect(lfoGain).connect(padFilter.frequency);
+        lfo.start();
+      }
+
+      await audioContext.resume();
+      musicPlaying = true;
+      updateMasterVolume(false);
+      if (!musicPulseTimer) {
+        schedulePulse();
+        musicPulseTimer = window.setInterval(schedulePulse, 535);
+      }
+      els.musicBtn.textContent = "❚❚ BGM 정지";
+      els.musicBtn.classList.add("warning");
+      showToast("밝은 e스포츠 로비풍 BGM을 재생합니다.");
+    }
+
+    function stopMusic() {
+      musicPlaying = false;
+      updateMasterVolume();
+      if (musicPulseTimer) {
+        clearInterval(musicPulseTimer);
+        musicPulseTimer = null;
+      }
+      els.musicBtn.textContent = "♪ BGM 재생";
+      els.musicBtn.classList.remove("warning");
+    }
+
+    function toggleMusic() {
+      if (musicPlaying) stopMusic();
+      else startMusic();
+    }
+
+    function hydrateServerState(serverState) {
+      const next = freshState();
+      if (!serverState || typeof serverState !== "object") return next;
+      next.started = Boolean(serverState.started);
+      next.stepIndex = Number(serverState.stepIndex) || 0;
+      next.remaining = Number(serverState.remaining) || 30;
+      next.initialBans = Array.isArray(serverState.initialBans) ? serverState.initialBans : [];
+      next.extraBans = Array.isArray(serverState.extraBans) ? serverState.extraBans : [];
+      next.banned = new Set(Array.isArray(serverState.banned) ? serverState.banned : []);
+      next.unbannedInitial = new Set(Array.isArray(serverState.unbannedInitial) ? serverState.unbannedInitial : []);
+      next.picks = {
+        A: Array.isArray(serverState.picks?.A) ? serverState.picks.A : [],
+        B: Array.isArray(serverState.picks?.B) ? serverState.picks.B : []
+      };
+      next.history = Array.isArray(serverState.history) ? serverState.history : [];
+      return next;
+    }
+
+    function roleLabel(role) {
+      if (role === "A") return "A팀";
+      if (role === "B") return "B팀";
+      return "관전자";
+    }
+
+    function currentRoomTokenKey(code, role) {
+      return `valorantRoomToken:${String(code || "").toUpperCase()}:${role || "spectator"}`;
+    }
+
+    function openOnlineModal() {
+      els.onlineModal.hidden = false;
+      updateOnlineUi();
+    }
+
+    function closeOnlineModal() {
+      els.onlineModal.hidden = true;
+    }
+
+    function normalizeRoomCode(value) {
+      return String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+    }
+
+    async function apiRequest(path, options = {}) {
+      const response = await fetch(path, {
+        cache: "no-store",
+        headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+        ...options
+      });
+      let payload = {};
+      try { payload = await response.json(); } catch (error) {}
+      if (!response.ok || payload.ok === false) {
+        const failure = new Error(payload.message || `HTTP ${response.status}`);
+        failure.code = payload.code || "";
+        failure.status = response.status;
+        throw failure;
+      }
+      return payload;
+    }
+
+    async function checkOnlineServer() {
+      try {
+        await apiRequest("/health", { method: "GET", headers: {} });
+        online.serverAvailable = true;
+      } catch (error) {
+        online.serverAvailable = false;
+      }
+      updateOnlineUi();
+    }
+
+    function stopOnlinePolling() {
+      if (online.pollTimer) {
+        clearInterval(online.pollTimer);
+        online.pollTimer = null;
+      }
+      online.pollBusy = false;
+    }
+
+    async function pollOnlineRoom() {
+      if (!online.active || online.pollBusy) return;
+      online.pollBusy = true;
+      const query = new URLSearchParams({
+        roomCode: online.roomCode,
+        role: online.role,
+        token: online.token
+      });
+      try {
+        const payload = await apiRequest(`/api/room?${query.toString()}`, { method: "GET", headers: {} });
+        online.serverAvailable = true;
+        applyRoomSnapshot(payload);
+      } catch (error) {
+        online.serverAvailable = false;
+        updateOnlineUi();
+        if (error.code === "ROOM_CLOSED" || error.code === "AUTH_FAILED" || error.status === 403 || error.status === 404) {
+          leaveOnlineRoom(false, false);
+          showToast(error.message || "온라인 방 연결이 종료되었습니다.");
+        }
+      } finally {
+        online.pollBusy = false;
+      }
+    }
+
+    function startOnlinePolling() {
+      stopOnlinePolling();
+      pollOnlineRoom();
+      online.pollTimer = window.setInterval(pollOnlineRoom, 650);
+    }
+
+    async function setupOnlineSocket() {
+      await checkOnlineServer();
+      window.setInterval(() => {
+        if (!online.active) checkOnlineServer();
+      }, 5000);
+    }
+
+    async function sendOnlineAction(action, extra = {}) {
+      if (!online.active) return null;
+      try {
+        const payload = await apiRequest("/api/action", {
+          method: "POST",
+          body: JSON.stringify({
+            roomCode: online.roomCode,
+            role: online.role,
+            token: online.token,
+            action,
+            ...extra
+          })
+        });
+        online.serverAvailable = true;
+        if (payload.state) applyRoomSnapshot(payload);
+        return payload;
+      } catch (error) {
+        showToast(error.message || "온라인 요청 처리 중 오류가 발생했습니다.");
+        return null;
+      }
+    }
+
+    function applyRoomSnapshot(payload) {
+      if (!payload) return;
+      if (payload.roomCode) online.roomCode = payload.roomCode;
+      if (payload.role) online.role = payload.role;
+      if (payload.state) state = hydrateServerState(payload.state);
+      online.deadline = payload.deadline || null;
+      online.members = payload.members || online.members;
+      if (payload.teamNames) {
+        els.teamAName.value = payload.teamNames.A || "A팀";
+        els.teamBName.value = payload.teamNames.B || "B팀";
+      }
+      restartTimerForCurrentStep();
+      updateOnlineUi();
+      render();
+    }
+
+    async function createOnlineRoom() {
+      if (!online.serverAvailable) {
+        showToast("온라인 서버로 실행해야 방을 만들 수 있습니다.");
+        return;
+      }
+      try {
+        const payload = await apiRequest("/api/create-room", {
+          method: "POST",
+          body: JSON.stringify({ teamName: teamName("A") })
+        });
+        online.active = true;
+        online.roomCode = payload.roomCode;
+        online.role = payload.role;
+        online.token = payload.token || "";
+        try { localStorage.setItem(currentRoomTokenKey(online.roomCode, online.role), online.token); } catch (error) {}
+        els.roomCodeInput.value = online.roomCode;
+        applyRoomSnapshot(payload);
+        startOnlinePolling();
+        showToast(`${online.roomCode} 방에 A팀으로 연결되었습니다.`);
+      } catch (error) {
+        showToast(error.message || "방을 만들지 못했습니다.");
+      }
+    }
+
+    async function joinOnlineRoom(role) {
+      if (!online.serverAvailable) {
+        showToast("온라인 서버로 실행해야 참가할 수 있습니다.");
+        return;
+      }
+      const code = normalizeRoomCode(els.roomCodeInput.value);
+      if (code.length !== 6) {
+        showToast("6자리 방 코드를 입력해주세요.");
+        return;
+      }
+      let token = "";
+      try { token = localStorage.getItem(currentRoomTokenKey(code, role)) || ""; } catch (error) {}
+      const teamNameValue = role === "A" ? teamName("A") : role === "B" ? teamName("B") : "관전자";
+      try {
+        const payload = await apiRequest("/api/join-room", {
+          method: "POST",
+          body: JSON.stringify({ roomCode: code, role, token, teamName: teamNameValue })
+        });
+        online.active = true;
+        online.roomCode = payload.roomCode;
+        online.role = payload.role;
+        online.token = payload.token || "";
+        if (online.token) {
+          try { localStorage.setItem(currentRoomTokenKey(online.roomCode, online.role), online.token); } catch (error) {}
+        }
+        els.roomCodeInput.value = online.roomCode;
+        applyRoomSnapshot(payload);
+        startOnlinePolling();
+        showToast(`${online.roomCode} 방에 ${roleLabel(online.role)}으로 연결되었습니다.`);
+      } catch (error) {
+        showToast(error.message || "방에 참가하지 못했습니다.");
+      }
+    }
+
+    async function leaveOnlineRoom(notify = true, tellServer = true) {
+      if (tellServer && online.active) {
+        try {
+          await apiRequest("/api/action", {
+            method: "POST",
+            body: JSON.stringify({
+              roomCode: online.roomCode,
+              role: online.role,
+              token: online.token,
+              action: "leave-room"
+            })
+          });
+        } catch (error) {}
+      }
+      stopOnlinePolling();
+      online.active = false;
+      online.roomCode = "";
+      online.role = null;
+      online.token = "";
+      online.deadline = null;
+      online.members = { A: null, B: null, spectators: 0 };
+      stopTimer();
+      state = freshState();
+      loadLocal();
+      restartTimerForCurrentStep();
+      updateOnlineUi();
+      render();
+      if (notify) showToast("온라인 방에서 나왔습니다.");
+    }
+
+    function updateOnlineUi() {
+      const connected = online.serverAvailable && online.active;
+      els.onlineBtn.classList.toggle("connected", connected);
+      els.modalConnectionDot.classList.toggle("connected", connected);
+      els.onlineBtnText.textContent = connected ? `${online.roomCode} · ${roleLabel(online.role)}` : "온라인 연결";
+      els.onlineStatusTitle.textContent = connected ? `방 ${online.roomCode} · ${roleLabel(online.role)}` : online.serverAvailable ? "온라인 서버 연결됨" : "오프라인 모드";
+      els.onlineStatusText.textContent = connected ? "상대와 드래프트 상태 및 타이머가 자동으로 동기화됩니다." : online.serverAvailable ? "방을 만들거나 6자리 코드로 참가하세요." : "HTML 파일을 직접 열면 오프라인만 가능합니다. 서버로 실행하면 온라인이 활성화됩니다.";
+      els.copyRoomBtn.disabled = !online.active;
+      els.leaveRoomBtn.disabled = !online.active;
+      els.createRoomBtn.disabled = !online.serverAvailable || online.active;
+      els.joinAReBtn.disabled = !online.serverAvailable || online.active;
+      els.joinBBtn.disabled = !online.serverAvailable || online.active;
+      els.joinSpectatorBtn.disabled = !online.serverAvailable || online.active;
+      const m = online.members || {};
+      els.roomMembers.innerHTML = `
+        <div><span>A팀</span><strong>${escapeHtml(m.A?.name || "비어 있음")}${m.A?.connected === false ? " · 재접속 대기" : ""}</strong></div>
+        <div><span>B팀</span><strong>${escapeHtml(m.B?.name || "비어 있음")}${m.B?.connected === false ? " · 재접속 대기" : ""}</strong></div>
+        <div><span>관전자</span><strong>${Number(m.spectators) || 0}명</strong></div>`;
+      els.teamAName.readOnly = online.active && online.role !== "A";
+      els.teamBName.readOnly = online.active && online.role !== "B";
+    }
+
+    function canControlStep(step = currentStep()) {
+      return Boolean(step) && (!online.active || online.role === step.team);
+    }
+
+    function freshState() {
+      return {
+        started: false,
+        stepIndex: 0,
+        remaining: 30,
+        initialBans: [],
+        extraBans: [],
+        banned: new Set(),
+        unbannedInitial: new Set(),
+        picks: { A: [], B: [] },
+        history: []
+      };
+    }
+
+    function teamName(team) {
+      const raw = team === "A" ? els.teamAName.value : els.teamBName.value;
+      return raw.trim() || `${team}팀`;
+    }
+
+    function agentById(id) {
+      return AGENTS.find(agent => agent.id === id);
+    }
+
+    function currentStep() {
+      return state.started && state.stepIndex < STEPS.length ? STEPS[state.stepIndex] : null;
+    }
+
+    function isComplete() {
+      return state.started && state.stepIndex >= STEPS.length;
+    }
+
+    function allPickedIds() {
+      return new Set([...state.picks.A, ...state.picks.B]);
+    }
+
+    function eligibleAgents() {
+      const step = currentStep();
+      if (!step) return [];
+      const picked = allPickedIds();
+
+      if (step.type === "initial-ban") {
+        const usedRoles = new Set(state.initialBans.map(item => agentById(item.agentId).role));
+        return AGENTS.filter(agent => !usedRoles.has(agent.role) && !state.banned.has(agent.id) && !picked.has(agent.id));
+      }
+
+      if (step.type === "pick") {
+        return AGENTS.filter(agent => !state.banned.has(agent.id) && !picked.has(agent.id));
+      }
+
+      if (step.type === "extra-ban") {
+        return AGENTS.filter(agent => !state.banned.has(agent.id) && !picked.has(agent.id));
+      }
+
+      if (step.type === "unban") {
+        return state.initialBans
+          .map(item => agentById(item.agentId))
+          .filter(agent => state.banned.has(agent.id));
+      }
+
+      return [];
+    }
+
+    function executeAction(agentId, automated = false) {
+      const step = currentStep();
+      if (!step) return;
+      if (online.active) {
+        if (!canControlStep(step)) {
+          showToast(`현재는 ${step.team}팀 차례입니다.`);
+          return;
+        }
+        sendOnlineAction("draft-action", { agentId });
+        return;
+      }
+
+      const eligible = eligibleAgents();
+      if (!eligible.some(agent => agent.id === agentId)) {
+        showToast("현재 단계에서 선택할 수 없는 요원입니다.");
+        return;
+      }
+
+      const agent = agentById(agentId);
+      const record = {
+        stepIndex: state.stepIndex,
+        phase: step.phase,
+        team: step.team,
+        type: step.type,
+        agentId,
+        automated,
+        time: Date.now()
+      };
+
+      if (step.type === "initial-ban") {
+        state.initialBans.push({ agentId, team: step.team });
+        state.banned.add(agentId);
+      } else if (step.type === "extra-ban") {
+        state.extraBans.push({ agentId, team: step.team });
+        state.banned.add(agentId);
+      } else if (step.type === "unban") {
+        state.banned.delete(agentId);
+        state.unbannedInitial.add(agentId);
+      } else if (step.type === "pick") {
+        state.picks[step.team].push(agentId);
+      }
+
+      state.history.push(record);
+      state.stepIndex += 1;
+      state.remaining = 30;
+      restartTimerForCurrentStep();
+      saveLocal();
+      render();
+
+      if (automated) {
+        showToast(`시간 초과: ${agent.name} 자동 선택`);
+      }
+    }
+
+    function randomCurrentAction(automated = false) {
+      const step = currentStep();
+      if (!step) return;
+      if (online.active) {
+        if (!canControlStep(step)) {
+          showToast(`현재는 ${step.team}팀 차례입니다.`);
+          return;
+        }
+        sendOnlineAction("random-action");
+        return;
+      }
+      let candidates = eligibleAgents();
+      if (!candidates.length) {
+        showToast("선택 가능한 요원이 없습니다.");
+        return;
+      }
+
+      // 초기 밴은 요원 수가 많은 역할에 랜덤 확률이 치우치지 않도록 역할부터 무작위 선택합니다.
+      if (step.type === "initial-ban") {
+        const availableRoles = [...new Set(candidates.map(agent => agent.role))];
+        const chosenRole = availableRoles[Math.floor(Math.random() * availableRoles.length)];
+        candidates = candidates.filter(agent => agent.role === chosenRole);
+      }
+
+      const agent = candidates[Math.floor(Math.random() * candidates.length)];
+      executeAction(agent.id, automated);
+    }
+
+    function rebuildFromHistory(history) {
+      const rebuilt = freshState();
+      rebuilt.started = true;
+
+      for (const record of history) {
+        const step = STEPS[rebuilt.stepIndex];
+        if (!step || step.type !== record.type || step.team !== record.team) break;
+
+        if (step.type === "initial-ban") {
+          rebuilt.initialBans.push({ agentId: record.agentId, team: step.team });
+          rebuilt.banned.add(record.agentId);
+        } else if (step.type === "extra-ban") {
+          rebuilt.extraBans.push({ agentId: record.agentId, team: step.team });
+          rebuilt.banned.add(record.agentId);
+        } else if (step.type === "unban") {
+          rebuilt.banned.delete(record.agentId);
+          rebuilt.unbannedInitial.add(record.agentId);
+        } else if (step.type === "pick") {
+          rebuilt.picks[step.team].push(record.agentId);
+        }
+
+        rebuilt.history.push(record);
+        rebuilt.stepIndex += 1;
+      }
+
+      rebuilt.remaining = 30;
+      return rebuilt;
+    }
+
+    function undo() {
+      if (!state.history.length) return;
+      if (online.active) {
+        if (online.role !== "A") return showToast("되돌리기는 A팀 방장만 사용할 수 있습니다.");
+        sendOnlineAction("undo-draft");
+        return;
+      }
+      stopTimer();
+      const shorter = state.history.slice(0, -1);
+      state = rebuildFromHistory(shorter);
+      restartTimerForCurrentStep();
+      saveLocal();
+      render();
+      showToast("마지막 선택을 되돌렸습니다.");
+    }
+
+    function startDraft() {
+      if (online.active) {
+        if (online.role !== "A") return showToast("드래프트 시작은 A팀 방장만 할 수 있습니다.");
+        sendOnlineAction("start-draft");
+        return;
+      }
+      if (state.started && state.history.length) {
+        showToast("이미 드래프트가 진행 중입니다.");
+        return;
+      }
+      state = freshState();
+      state.started = true;
+      saveLocal();
+      restartTimerForCurrentStep();
+      render();
+    }
+
+    function resetDraft() {
+      if (online.active) {
+        if (online.role !== "A") return showToast("초기화는 A팀 방장만 사용할 수 있습니다.");
+        if ((state.started || state.history.length) && !window.confirm("온라인 방의 밴/픽 기록을 모두 초기화할까요?")) return;
+        sendOnlineAction("reset-draft");
+        return;
+      }
+      if ((state.started || state.history.length) && !window.confirm("현재 밴/픽 기록을 모두 초기화할까요?")) return;
+      stopTimer();
+      state = freshState();
+      try {
+        localStorage.removeItem("valorantDraftStateV1");
+      } catch (error) {
+        console.warn("로컬 저장소를 초기화하지 못했습니다.", error);
+      }
+      render();
+      showToast("드래프트를 초기화했습니다.");
+    }
+
+    function restartTimerForCurrentStep() {
+      stopTimer();
+      const step = currentStep();
+      if (online.active) {
+        if (!step || !step.timed || !online.deadline) return;
+        updateTimerDisplay();
+        timerInterval = window.setInterval(updateTimerDisplay, 250);
+        return;
+      }
+      if (!step || !step.timed) return;
+      state.remaining = 30;
+      updateTimerDisplay();
+      timerInterval = window.setInterval(() => {
+        state.remaining -= 1;
+        updateTimerDisplay();
+        if (state.remaining <= 0) {
+          stopTimer();
+          randomCurrentAction(true);
+        }
+      }, 1000);
+    }
+
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    function updateTimerDisplay() {
+      const step = currentStep();
+      if (!state.started) {
+        els.timer.textContent = "준비";
+        els.timer.className = "timer";
+      } else if (isComplete()) {
+        els.timer.textContent = "완료";
+        els.timer.className = "timer";
+      } else if (!step.timed) {
+        els.timer.textContent = "제한 없음";
+        els.timer.className = "timer";
+      } else {
+        const remaining = online.active && online.deadline ? Math.max(0, Math.ceil((online.deadline - Date.now()) / 1000)) : state.remaining;
+        els.timer.textContent = `00:${String(Math.max(0, remaining)).padStart(2, "0")}`;
+        els.timer.className = `timer running${remaining <= 5 ? " urgent" : ""}`;
+      }
+    }
+
+    function render() {
+      renderHeader();
+      renderPhase();
+      renderPicks("A", els.teamAPicks);
+      renderPicks("B", els.teamBPicks);
+      renderBans();
+      renderFilters();
+      renderAgents();
+      renderHistory();
+      updateTimerDisplay();
+    }
+
+    function renderHeader() {
+      const step = currentStep();
+      const progress = Math.round((state.stepIndex / STEPS.length) * 100);
+      els.turnCard.style.setProperty("--progress", `${progress}%`);
+      els.teamACount.textContent = `픽 ${state.picks.A.length} / 5`;
+      els.teamBCount.textContent = `픽 ${state.picks.B.length} / 5`;
+      els.teamAPanelTitle.textContent = `${teamName("A")} 선택`;
+      els.teamBPanelTitle.textContent = `${teamName("B")} 선택`;
+
+      if (!state.started) {
+        els.phaseLabel.textContent = "대기 중";
+        els.turnTitle.textContent = "드래프트 시작을 눌러주세요";
+        els.turnHelp.textContent = "초기 밴은 각 선택마다 30초가 주어집니다.";
+      } else if (isComplete()) {
+        els.phaseLabel.textContent = "드래프트 완료";
+        els.turnTitle.textContent = `${teamName("A")} 5명 · ${teamName("B")} 5명 확정`;
+        els.turnHelp.textContent = "모든 픽은 서로 중복되지 않습니다.";
+      } else {
+        const phaseKind = step.phase === 1 ? "1차 밴" : step.phase === 3 ? (step.type === "extra-ban" ? "2차 밴" : "안티밴") : step.phase === 2 ? "1차 픽" : "2차 픽";
+        els.phaseLabel.textContent = `${step.phase}페이즈 · ${phaseKind} · ${step.team === "A" ? teamName("A") : teamName("B")}`;
+        els.turnTitle.textContent = `${step.team}팀 ${step.label}`;
+        els.turnHelp.textContent = step.help;
+      }
+
+      els.startBtn.disabled = state.started || (online.active && online.role !== "A");
+      els.startBtn.textContent = state.started ? "진행 중" : "드래프트 시작";
+      els.randomBtn.disabled = !step || !canControlStep(step);
+      els.undoBtn.disabled = !state.history.length || (online.active && online.role !== "A");
+      els.resetBtn.disabled = online.active && online.role !== "A";
+      els.copyBtn.disabled = !isComplete();
+      els.completedBanner.classList.toggle("show", isComplete());
+    }
+
+    function renderPhase() {
+      const step = currentStep();
+      document.querySelectorAll(".phase-chip").forEach(chip => {
+        const phase = Number(chip.dataset.phase);
+        chip.classList.remove("active", "done");
+        if (isComplete() || (step && phase < step.phase)) chip.classList.add("done");
+        if (step && phase === step.phase) chip.classList.add("active");
+      });
+    }
+
+    function renderPicks(team, container) {
+      const picks = state.picks[team];
+      container.innerHTML = "";
+      for (let i = 0; i < 5; i += 1) {
+        const agent = picks[i] ? agentById(picks[i]) : null;
+        const slot = document.createElement("div");
+        slot.className = `pick-slot${agent ? " filled" : ""}`;
+        slot.innerHTML = `
+          <div class="slot-num">${i + 1}</div>
+          ${agent ? portraitMarkup(agent) : ""}
+          <div class="slot-info">${agent
+            ? `<div class="slot-name">${escapeHtml(agent.name)}</div><div class="slot-role">${escapeHtml(agent.role)}</div>`
+            : `<div class="empty-text">선택 대기</div>`}
+          </div>`;
+        container.appendChild(slot);
+      }
+    }
+
+    function renderBans() {
+      els.initialBanList.innerHTML = "";
+      if (!state.initialBans.length) {
+        els.initialBanList.innerHTML = '<div class="mini">아직 밴된 요원이 없습니다.</div>';
+      } else {
+        state.initialBans.forEach(item => {
+          const agent = agentById(item.agentId);
+          const unbanned = state.unbannedInitial.has(item.agentId);
+          const row = document.createElement("div");
+          row.className = `ban-row${unbanned ? " unbanned" : ""}`;
+          row.innerHTML = `<div style="display:flex;align-items:center;gap:8px">${portraitMarkup(agent)}<div><strong>${escapeHtml(agent.name)}</strong><div class="ban-role">${escapeHtml(agent.role)}</div></div></div><span class="${unbanned ? "unban-text" : item.team === "A" ? "team-a-text" : "team-b-text"}">${unbanned ? "해제" : item.team + "팀"}</span>`;
+          els.initialBanList.appendChild(row);
+        });
+      }
+
+      els.extraBanList.innerHTML = "";
+      if (!state.extraBans.length) {
+        els.extraBanList.innerHTML = '<div class="mini">아직 추가 밴이 없습니다.</div>';
+      } else {
+        state.extraBans.forEach(item => {
+          const agent = agentById(item.agentId);
+          const row = document.createElement("div");
+          row.className = "ban-row";
+          row.innerHTML = `<div style="display:flex;align-items:center;gap:8px">${portraitMarkup(agent)}<div><strong>${escapeHtml(agent.name)}</strong><div class="ban-role">${escapeHtml(agent.role)}</div></div></div><span class="${item.team === "A" ? "team-a-text" : "team-b-text"}">${item.team}팀</span>`;
+          els.extraBanList.appendChild(row);
+        });
+      }
+    }
+
+    function renderFilters() {
+      if (els.roleFilters.childElementCount) return;
+      ["전체", ...ROLES].forEach(role => {
+        const button = document.createElement("button");
+        button.className = `role-filter${role === activeRoleFilter ? " active" : ""}`;
+        button.textContent = role;
+        button.addEventListener("click", () => {
+          activeRoleFilter = role;
+          document.querySelectorAll(".role-filter").forEach(btn => btn.classList.toggle("active", btn.textContent === role));
+          renderAgents();
+        });
+        els.roleFilters.appendChild(button);
+      });
+    }
+
+    function agentStatus(agent) {
+      if (state.picks.A.includes(agent.id)) return { text: "A PICK", className: "status-a", card: "selected-a" };
+      if (state.picks.B.includes(agent.id)) return { text: "B PICK", className: "status-b", card: "selected-b" };
+      if (state.banned.has(agent.id)) {
+        const isSecondBan = state.extraBans.some(item => item.agentId === agent.id);
+        return { text: isSecondBan ? "2차 BAN" : "1차 BAN", className: isSecondBan ? "status-ban-2" : "status-ban-1", card: "banned" };
+      }
+      if (state.unbannedInitial.has(agent.id)) return { text: "1차 해제", className: "status-unban", card: "unbanned" };
+      return null;
+    }
+
+    function renderAgents() {
+      const eligibleIds = new Set(eligibleAgents().map(agent => agent.id));
+      const shownAgents = AGENTS.filter(agent => activeRoleFilter === "전체" || agent.role === activeRoleFilter);
+      els.agentsGrid.innerHTML = "";
+
+      shownAgents.forEach(agent => {
+        const status = agentStatus(agent);
+        const button = document.createElement("button");
+        button.className = `agent-card${status ? ` ${status.card}` : ""}`;
+        button.style.setProperty("--role-color", ROLE_COLORS[agent.role]);
+        button.disabled = !eligibleIds.has(agent.id) || !canControlStep();
+        button.setAttribute("aria-label", `${agent.name}, ${agent.role}${button.disabled ? ", 선택 불가" : ", 선택 가능"}`);
+        button.innerHTML = `
+          ${status ? `<span class="agent-status ${status.className}">${status.text}</span>` : ""}
+          <span class="agent-portrait-fallback">${escapeHtml(agent.name.slice(0, 1))}</span>
+          ${agent.portrait ? `<img class="agent-portrait" src="${escapeHtml(agent.portrait)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : ""}
+          <div class="agent-name">${escapeHtml(agent.name)}</div>
+          <div class="agent-role">${escapeHtml(agent.role)}</div>`;
+        button.addEventListener("click", () => executeAction(agent.id));
+        els.agentsGrid.appendChild(button);
+      });
+
+      els.eligibleCount.textContent = state.started && !isComplete() ? `선택 가능 ${eligibleIds.size}명` : `전체 ${AGENTS.length}명`;
+    }
+
+    function historyText(record) {
+      const agent = agentById(record.agentId);
+      const action = {
+        "initial-ban": "1차 밴",
+        "extra-ban": "2차 밴",
+        "unban": "1차 밴 해제",
+        "pick": "픽"
+      }[record.type];
+      return `<span class="${record.team === "A" ? "team-a-text" : "team-b-text"}">${record.team}팀</span> ${action} · <strong>${escapeHtml(agent.name)}</strong>${record.automated ? " <span class=\"mini\">(자동)</span>" : ""}`;
+    }
+
+    function renderHistory() {
+      els.historyList.innerHTML = "";
+      if (!state.history.length) {
+        els.historyList.innerHTML = '<div class="mini">드래프트를 시작하면 선택 기록이 표시됩니다.</div>';
+      } else {
+        state.history.forEach((record, index) => {
+          const row = document.createElement("div");
+          row.className = "history-row";
+          row.innerHTML = `<span class="history-index">${index + 1}</span><div>${historyText(record)}</div>`;
+          els.historyList.appendChild(row);
+        });
+        els.historyList.scrollTop = els.historyList.scrollHeight;
+      }
+      els.historyCount.textContent = `${state.history.length} / ${STEPS.length}`;
+    }
+
+    function resultText() {
+      const line = "────────────────────";
+      const initial = state.initialBans.map(item => {
+        const agent = agentById(item.agentId);
+        const status = state.unbannedInitial.has(item.agentId) ? " → 밴 해제" : "";
+        return `${agent.role}: ${agent.name} (${item.team}팀 밴)${status}`;
+      }).join("\n");
+      const extra = state.extraBans.map(item => {
+        const agent = agentById(item.agentId);
+        return `${agent.name} (${agent.role}, ${item.team}팀 밴)`;
+      }).join("\n");
+      const teamA = state.picks.A.map((id, i) => `${i + 1}. ${agentById(id).name} (${agentById(id).role})`).join("\n");
+      const teamB = state.picks.B.map((id, i) => `${i + 1}. ${agentById(id).name} (${agentById(id).role})`).join("\n");
+
+      return `[VALORANT 밴/픽 결과]\n${line}\n[${teamName("A")}]\n${teamA}\n${line}\n[${teamName("B")}]\n${teamB}\n${line}\n[1차 밴 · 포지션별]\n${initial}\n${line}\n[2차 밴 · 해제 불가]\n${extra}`;
+    }
+
+    async function copyResult() {
+      if (!isComplete()) return;
+      const text = resultText();
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (error) {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      }
+      showToast("밴/픽 결과를 클립보드에 복사했습니다.");
+    }
+
+    function saveLocal() {
+      if (online.active) return;
+      const payload = {
+        started: state.started,
+        history: state.history,
+        teamA: els.teamAName.value,
+        teamB: els.teamBName.value
+      };
+      try {
+        localStorage.setItem("valorantDraftStateV1", JSON.stringify(payload));
+      } catch (error) {
+        // 일부 브라우저/보안 환경에서는 로컬 파일의 저장소 접근이 제한될 수 있습니다.
+        // 저장이 실패해도 현재 드래프트 진행은 정상적으로 유지합니다.
+        console.warn("드래프트 자동 저장을 사용할 수 없습니다.", error);
+      }
+    }
+
+    function loadLocal() {
+      if (online.active) return;
+      try {
+        const raw = localStorage.getItem("valorantDraftStateV1");
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (typeof saved.teamA === "string") els.teamAName.value = saved.teamA;
+        if (typeof saved.teamB === "string") els.teamBName.value = saved.teamB;
+        if (saved.started && Array.isArray(saved.history)) {
+          state = rebuildFromHistory(saved.history);
+          restartTimerForCurrentStep();
+        }
+      } catch (error) {
+        console.warn("저장된 드래프트를 불러오지 못했습니다.", error);
+      }
+    }
+
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => els.toast.classList.remove("show"), 2200);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    els.onlineBtn.addEventListener("click", openOnlineModal);
+    els.onlineCloseBtn.addEventListener("click", closeOnlineModal);
+    els.onlineModal.addEventListener("click", event => { if (event.target === els.onlineModal) closeOnlineModal(); });
+    els.roomCodeInput.addEventListener("input", () => { els.roomCodeInput.value = normalizeRoomCode(els.roomCodeInput.value); });
+    els.createRoomBtn.addEventListener("click", createOnlineRoom);
+    els.joinAReBtn.addEventListener("click", () => joinOnlineRoom("A"));
+    els.joinBBtn.addEventListener("click", () => joinOnlineRoom("B"));
+    els.joinSpectatorBtn.addEventListener("click", () => joinOnlineRoom("spectator"));
+    els.leaveRoomBtn.addEventListener("click", () => leaveOnlineRoom(true));
+    els.copyRoomBtn.addEventListener("click", async () => {
+      if (!online.roomCode) return;
+      try { await navigator.clipboard.writeText(online.roomCode); } catch (error) {}
+      showToast("방 코드를 복사했습니다.");
+    });
+    els.musicBtn.addEventListener("click", toggleMusic);
+    els.volumeRange.value = String(getSavedVolume());
+    els.volumeRange.addEventListener("input", () => {
+      updateMasterVolume();
+      try { localStorage.setItem("valorantDraftBgmVolume", els.volumeRange.value); } catch (error) {}
+    });
+    els.startBtn.addEventListener("click", startDraft);
+    els.randomBtn.addEventListener("click", () => randomCurrentAction(false));
+    els.undoBtn.addEventListener("click", undo);
+    els.copyBtn.addEventListener("click", copyResult);
+    els.resetBtn.addEventListener("click", resetDraft);
+    els.teamAName.addEventListener("input", () => {
+      if (online.active && online.role === "A") sendOnlineAction("team-name", { team: "A", name: els.teamAName.value });
+      else saveLocal();
+      renderHeader();
+    });
+    els.teamBName.addEventListener("input", () => {
+      if (online.active && online.role === "B") sendOnlineAction("team-name", { team: "B", name: els.teamBName.value });
+      else saveLocal();
+      renderHeader();
+    });
+
+    loadLocal();
+    render();
+    setupOnlineSocket();
+    updateOnlineUi();
+    loadAgentPortraits();
+  </script>
+</body>
+</html>

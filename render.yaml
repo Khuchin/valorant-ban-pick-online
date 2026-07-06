@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: valorant-ban-pick-online
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: echo "No build required"
+    startCommand: node server.js
+    healthCheckPath: /health
+    autoDeployTrigger: commit
