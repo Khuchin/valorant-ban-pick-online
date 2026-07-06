@@ -824,44 +824,50 @@
     .tier-C { color: #e1ddff; border-color: rgba(165,140,255,.58); background: rgba(65,51,112,.90); }
     .tier-D { color: #d3dae6; border-color: rgba(145,157,176,.48); background: rgba(55,62,75,.92); }
 
-    /* 요원 스킬 툴팁 */
+    /* 요원 스킬 툴팁: 스크롤보다 한 화면 표시를 우선하는 컴팩트 2열형 */
     .agent-tooltip {
       position: fixed;
-      width: min(410px, calc(100vw - 24px));
-      max-height: min(72vh, 620px);
+      width: min(560px, calc(100vw - 18px));
+      max-height: calc(100vh - 18px);
       overflow-x: hidden;
       overflow-y: auto;
       overscroll-behavior: contain;
-      scrollbar-gutter: stable;
-      padding: 13px;
+      padding: 9px;
       border: 1px solid #4d6281;
-      border-radius: 14px;
-      background: linear-gradient(160deg, rgba(20,31,49,.985), rgba(9,14,24,.985));
-      box-shadow: 0 24px 70px rgba(0,0,0,.58);
+      border-radius: 12px;
+      background: linear-gradient(160deg, rgba(20,31,49,.988), rgba(9,14,24,.988));
+      box-shadow: 0 20px 58px rgba(0,0,0,.55);
       pointer-events: auto;
       opacity: 0;
-      transform: translateY(4px);
-      transition: opacity .12s ease, transform .12s ease;
+      transform: translateY(3px);
+      transition: opacity .1s ease, transform .1s ease;
     }
-    .agent-tooltip::-webkit-scrollbar { width: 9px; }
-    .agent-tooltip::-webkit-scrollbar-track { background: rgba(255,255,255,.025); border-radius: 10px; }
-    .agent-tooltip::-webkit-scrollbar-thumb { background: rgba(130,156,195,.48); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
-    .agent-tooltip::-webkit-scrollbar-thumb:hover { background: rgba(160,188,226,.66); background-clip: padding-box; }
+    .agent-tooltip::-webkit-scrollbar { width: 7px; }
+    .agent-tooltip::-webkit-scrollbar-track { background: rgba(255,255,255,.02); border-radius: 8px; }
+    .agent-tooltip::-webkit-scrollbar-thumb { background: rgba(130,156,195,.44); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
     .agent-tooltip[hidden] { display: none; }
     .agent-tooltip.show { opacity: 1; transform: translateY(0); }
-    .tooltip-head { position: sticky; top: -13px; z-index: 2; display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; margin: -13px -13px 0; padding: 13px 13px 9px; border-bottom: 1px solid var(--line); background: linear-gradient(160deg, rgba(20,31,49,.995), rgba(13,21,34,.995)); }
-    .tooltip-name { font-size: 18px; font-weight: 1000; }
-    .tooltip-role { margin-top: 2px; font-size: 11px; font-weight: 900; }
-    .tooltip-tier { flex: 0 0 auto; padding: 5px 8px; border-radius: 9px; font-size: 11px; font-weight: 1000; background: rgba(255,255,255,.06); }
-    .tooltip-description { color: var(--muted); font-size: 11px; margin-top: 8px; line-height: 1.5; }
-    .tooltip-skills { display: grid; gap: 7px; margin-top: 10px; }
-    .tooltip-skill { display: grid; grid-template-columns: 36px 1fr; gap: 8px; padding: 8px; border-radius: 10px; background: rgba(255,255,255,.035); border: 1px solid rgba(89,108,139,.28); }
-    .tooltip-skill-icon { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; background: rgba(255,255,255,.055); overflow: hidden; color: var(--muted); font-size: 9px; font-weight: 1000; }
+    .tooltip-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; margin: -9px -9px 0; padding: 8px 9px 6px; border-bottom: 1px solid var(--line); background: linear-gradient(160deg, rgba(20,31,49,.995), rgba(13,21,34,.995)); border-radius: 12px 12px 0 0; }
+    .tooltip-name { font-size: 15px; line-height: 1.1; font-weight: 1000; }
+    .tooltip-role { margin-top: 1px; font-size: 9px; font-weight: 900; }
+    .tooltip-tier { flex: 0 0 auto; padding: 3px 6px; border-radius: 7px; font-size: 9px; font-weight: 1000; background: rgba(255,255,255,.06); }
+    .tooltip-description { color: var(--muted); font-size: 9px; margin-top: 5px; line-height: 1.32; }
+    .tooltip-skills { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 5px; margin-top: 6px; }
+    .tooltip-skill { display: grid; grid-template-columns: 27px minmax(0,1fr); gap: 5px; padding: 5px; border-radius: 8px; background: rgba(255,255,255,.035); border: 1px solid rgba(89,108,139,.28); }
+    .tooltip-skill-icon { width: 27px; height: 27px; border-radius: 6px; display: grid; place-items: center; background: rgba(255,255,255,.055); overflow: hidden; color: var(--muted); font-size: 7px; font-weight: 1000; }
     .tooltip-skill-icon img { width: 100%; height: 100%; object-fit: contain; }
-    .tooltip-skill strong { display: block; font-size: 12px; }
-    .tooltip-skill p { color: #b4bed0; font-size: 10px; margin-top: 2px; line-height: 1.45; }
-    .tooltip-loading { color: var(--muted); padding: 10px 2px 2px; font-size: 11px; }
-    .tooltip-scroll-hint { position: sticky; bottom: -13px; z-index: 2; margin: 10px -13px -13px; padding: 7px 10px; text-align: center; color: #c9d5e8; background: rgba(8,14,24,.96); border-top: 1px solid rgba(89,108,139,.42); font-size: 9px; font-weight: 900; }
+    .tooltip-skill strong { display: block; font-size: 9.5px; line-height: 1.15; }
+    .tooltip-skill p { color: #b8c2d3; font-size: 8.3px; margin-top: 1px; line-height: 1.27; overflow-wrap: anywhere; }
+    .tooltip-loading { color: var(--muted); padding: 7px 2px 2px; font-size: 9px; }
+    .tooltip-scroll-hint { display: none; }
+
+    @media (max-width: 720px) {
+      .agent-tooltip { width: min(390px, calc(100vw - 12px)); max-height: calc(100vh - 12px); padding: 7px; }
+      .tooltip-head { margin: -7px -7px 0; padding: 7px; }
+      .tooltip-skills { grid-template-columns: 1fr; gap: 4px; }
+      .tooltip-description { font-size: 8.5px; }
+      .tooltip-skill p { font-size: 8px; line-height: 1.22; }
+    }
 
     /* 맵별 요원 티어 편집기 */
     .tier-modal { width: min(1180px, 100%); max-height: calc(100vh - 28px); overflow: auto; border: 1px solid #4b5f7d; border-radius: 18px; background: linear-gradient(155deg,#162136,#0b111d); box-shadow: 0 30px 90px rgba(0,0,0,.58); padding: 16px; }
@@ -1894,15 +1900,15 @@
       const abilityMarkup = Array.isArray(agent.abilities) && agent.abilities.length
         ? agent.abilities.map(ability => `<div class="tooltip-skill"><div class="tooltip-skill-icon">${ability.icon ? `<img src="${escapeHtml(ability.icon)}" alt="" />` : escapeHtml(ability.slot || "SKILL")}</div><div><strong>${escapeHtml(ability.name)}</strong><p>${escapeHtml(ability.description)}</p></div></div>`).join("")
         : '<div class="tooltip-loading">인터넷에서 스킬 정보를 불러오는 중이거나 현재 사용할 수 없습니다.</div>';
-      els.agentTooltip.innerHTML = `<div class="tooltip-head"><div><div class="tooltip-name">${escapeHtml(agent.name)}</div><div class="tooltip-role" style="color:${ROLE_COLORS[agent.role]}">${escapeHtml(agent.role)}</div></div><div class="tooltip-tier${tier ? ` tier-${tier}` : ""}">${escapeHtml(tierTextForTooltip(agent))}</div></div>${agent.description ? `<div class="tooltip-description">${escapeHtml(agent.description)}</div>` : ""}<div class="tooltip-skills">${abilityMarkup}</div><div class="tooltip-scroll-hint">설명이 길면 이 창 위에서 마우스 휠로 스크롤하세요</div>`;
+      els.agentTooltip.innerHTML = `<div class="tooltip-head"><div><div class="tooltip-name">${escapeHtml(agent.name)}</div><div class="tooltip-role" style="color:${ROLE_COLORS[agent.role]}">${escapeHtml(agent.role)}</div></div><div class="tooltip-tier${tier ? ` tier-${tier}` : ""}">${escapeHtml(tierTextForTooltip(agent))}</div></div>${agent.description ? `<div class="tooltip-description">${escapeHtml(agent.description)}</div>` : ""}<div class="tooltip-skills">${abilityMarkup}</div>`;
       els.agentTooltip.scrollTop = 0;
       els.agentTooltip.hidden = false;
       els.agentTooltip.classList.remove("show");
       requestAnimationFrame(() => {
         const rect = anchor.getBoundingClientRect();
         const tipRect = els.agentTooltip.getBoundingClientRect();
-        let left = rect.right + 10;
-        if (left + tipRect.width > window.innerWidth - 10) left = rect.left - tipRect.width - 10;
+        let left = rect.right + 4;
+        if (left + tipRect.width > window.innerWidth - 10) left = rect.left - tipRect.width - 4;
         left = Math.max(10, Math.min(left, window.innerWidth - tipRect.width - 10));
         let top = rect.top;
         if (top + tipRect.height > window.innerHeight - 10) top = window.innerHeight - tipRect.height - 10;
