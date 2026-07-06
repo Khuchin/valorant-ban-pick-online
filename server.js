@@ -9,6 +9,10 @@ const { URL } = require("url");
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
 const ROLES = ["타격대", "감시자", "척후대", "전략가"];
+const MAPS = new Set([
+  "summit", "corrode", "abyss", "sunset", "lotus", "pearl", "fracture",
+  "breeze", "icebox", "ascent", "split", "haven", "bind"
+]);
 const AGENTS = [
   ["jett", "타격대"], ["phoenix", "타격대"], ["raze", "타격대"], ["reyna", "타격대"],
   ["yoru", "타격대"], ["neon", "타격대"], ["iso", "타격대"], ["waylay", "타격대"],
@@ -45,8 +49,9 @@ const STEPS = [
 const rooms = new Map();
 const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-function freshState() {
+function freshState(selectedMap = "") {
   return {
+    selectedMap: MAPS.has(selectedMap) ? selectedMap : "",
     started: false,
     stepIndex: 0,
     remaining: 30,
@@ -61,6 +66,7 @@ function freshState() {
 
 function serializeState(state) {
   return {
+    selectedMap: state.selectedMap || "",
     started: state.started,
     stepIndex: state.stepIndex,
     remaining: state.remaining,
@@ -236,8 +242,8 @@ function executeRandom(room, automated = false) {
   return applyAction(room, chosen.id, automated);
 }
 
-function rebuildFromHistory(history) {
-  const state = freshState();
+function rebuildFromHistory(history, selectedMap = "") {
+  const state = freshState(selectedMap);
   state.started = true;
   for (const record of history) {
     const step = STEPS[state.stepIndex];
@@ -404,9 +410,10 @@ async function handleApi(req, res, url) {
     if (action === "start-draft") {
       if (role !== "A") result = { ok: false, message: "A팀 방장만 시작할 수 있습니다." };
       else if (!room.seats.B || Date.now() - room.seats.B.lastSeen >= 5000) result = { ok: false, message: "B팀이 참가한 뒤 시작할 수 있습니다." };
+      else if (!room.state.selectedMap) result = { ok: false, message: "밴/픽을 진행할 맵을 먼저 선택해주세요." };
       else if (room.state.started) result = { ok: false, message: "이미 드래프트가 진행 중입니다." };
       else {
-        room.state = freshState();
+        room.state = freshState(room.state.selectedMap);
         room.state.started = true;
         scheduleRoomTimer(room);
       }
@@ -421,14 +428,22 @@ async function handleApi(req, res, url) {
     } else if (action === "undo-draft") {
       if (role !== "A") result = { ok: false, message: "A팀 방장만 되돌릴 수 있습니다." };
       else if (room.state.history.length) {
-        room.state = rebuildFromHistory(room.state.history.slice(0, -1));
+        room.state = rebuildFromHistory(room.state.history.slice(0, -1), room.state.selectedMap);
         scheduleRoomTimer(room);
       }
     } else if (action === "reset-draft") {
       if (role !== "A") result = { ok: false, message: "A팀 방장만 초기화할 수 있습니다." };
       else {
         clearRoomTimer(room);
-        room.state = freshState();
+        room.state = freshState(room.state.selectedMap);
+      }
+    } else if (action === "set-map") {
+      if (role !== "A") result = { ok: false, message: "A팀 방장만 맵을 선택할 수 있습니다." };
+      else if (room.state.started) result = { ok: false, message: "드래프트 시작 후에는 맵을 변경할 수 없습니다." };
+      else {
+        const selectedMap = String(body.mapId || "").toLowerCase();
+        if (!MAPS.has(selectedMap)) result = { ok: false, message: "지원하지 않는 맵입니다." };
+        else room.state.selectedMap = selectedMap;
       }
     } else if (action === "team-name") {
       if ((role !== "A" && role !== "B") || role !== body.team) result = { ok: false, message: "팀 이름을 변경할 권한이 없습니다." };
