@@ -6,7 +6,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { URL } = require("url");
 
-const VERSION = "11.0.0";
+const VERSION = "11.1.0";
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
 const CONTENT_CACHE_FILE = path.join(__dirname, "game-content-cache.json");
@@ -551,7 +551,7 @@ async function fetchJson(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
   try {
-    const response = await fetch(url, { signal: controller.signal, headers: { "User-Agent": `valorant-ban-pick/${VERSION}` } });
+    const response = await fetch(url, { signal: controller.signal, headers: { "User-Agent": `agent-draft-tool/${VERSION}` } });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
   } finally {
@@ -942,6 +942,6 @@ setInterval(() => {
 }, 5000).unref();
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`VALORANT Ban/Pick v${VERSION} server running: http://localhost:${PORT}`);
+  console.log(`Agent Draft Tool v${VERSION} server running: http://localhost:${PORT}`);
   console.log("No npm package installation is required.");
 });

@@ -1,11 +1,11 @@
 @echo off
 setlocal EnableExtensions
 chcp 65001 >nul
-title VALORANT Ban-Pick Local Server
+title Agent Draft Tool Local Server
 cd /d "%~dp0"
 
 echo ================================================
-echo   VALORANT Ban-Pick Local Server - No Install
+echo   Agent Draft Tool Local Server - No Install
 echo ================================================
 echo.
 
