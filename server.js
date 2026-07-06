@@ -9,6 +9,7 @@ const { URL } = require("url");
 const PORT = Number(process.env.PORT) || 3000;
 const PUBLIC_DIR = path.join(__dirname, "public");
 const ROLES = ["타격대", "감시자", "척후대", "전략가"];
+const TIER_VALUES = new Set(["S", "A", "B", "C", "D", ""]);
 const MAPS = new Set([
   "summit", "corrode", "abyss", "sunset", "lotus", "pearl", "fracture",
   "breeze", "icebox", "ascent", "split", "haven", "bind"
@@ -110,6 +111,7 @@ function createRoom(teamName) {
       B: null
     },
     spectators: new Map(),
+    tierProfiles: {},
     deadline: null,
     timer: null,
     updatedAt: now
@@ -157,13 +159,34 @@ function publicMembers(room) {
   };
 }
 
+function sanitizeTierProfile(input, mapId) {
+  const source = input && typeof input === "object" ? input : {};
+  const assignments = {};
+  if (source.assignments && typeof source.assignments === "object") {
+    for (const [agentId, rawTier] of Object.entries(source.assignments)) {
+      if (!AGENT_BY_ID.has(agentId)) continue;
+      const tier = String(rawTier || "").toUpperCase();
+      if (TIER_VALUES.has(tier) && tier) assignments[agentId] = tier;
+    }
+  }
+  return {
+    mapId,
+    assignments,
+    sourceName: String(source.sourceName || "").replace(/[<>\r\n]/g, "").trim().slice(0, 80),
+    sourceUrl: String(source.sourceUrl || "").replace(/[<>\r\n]/g, "").trim().slice(0, 500),
+    updatedAt: String(source.updatedAt || "").replace(/[<>\r\n]/g, "").trim().slice(0, 30)
+  };
+}
+
 function snapshot(room) {
+  const mapId = room.state.selectedMap || "";
   return {
     roomCode: room.code,
     state: serializeState(room.state),
     deadline: room.deadline,
     teamNames: room.teamNames,
-    members: publicMembers(room)
+    members: publicMembers(room),
+    tierProfile: mapId ? (room.tierProfiles[mapId] || null) : null
   };
 }
 
@@ -444,6 +467,13 @@ async function handleApi(req, res, url) {
         const selectedMap = String(body.mapId || "").toLowerCase();
         if (!MAPS.has(selectedMap)) result = { ok: false, message: "지원하지 않는 맵입니다." };
         else room.state.selectedMap = selectedMap;
+      }
+    } else if (action === "set-tier-profile") {
+      if (role !== "A") result = { ok: false, message: "A팀 방장만 티어표를 수정할 수 있습니다." };
+      else if (!room.state.selectedMap) result = { ok: false, message: "맵을 먼저 선택해주세요." };
+      else {
+        const mapId = room.state.selectedMap;
+        room.tierProfiles[mapId] = sanitizeTierProfile(body.profile, mapId);
       }
     } else if (action === "team-name") {
       if ((role !== "A" && role !== "B") || role !== body.team) result = { ok: false, message: "팀 이름을 변경할 권한이 없습니다." };
